@@ -1,0 +1,3093 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scene Studio · 대사 리딩 장면 메이커</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+	@font-face {
+        font-family: 'KoPubWorld Batang';
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+        src: url('https://cdn.jsdelivr.net/gh/adrinerDP/font-kopubworld@master/fonts/KoPubWorld-Batang-Medium.woff') format('woff');
+    	}
+	@font-face {
+        font-family: 'KoPubWorld Batang';
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+        src: url('https://cdn.jsdelivr.net/gh/adrinerDP/font-kopubworld@master/fonts/KoPubWorld-Batang-Bold.woff') format('woff');
+    	}
+        
+	:root {
+            --bg-dark: #1a1a1a;
+            --panel-bg: #2a2a2a;
+            --group-bg: #333333;
+            --accent-color: #4CAF50;
+            --accent-hover: #45a049;
+            --text-light: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: #444444;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center; 
+        }
+
+        #control-panel-area {
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 1300px;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel-header {
+            grid-column: span 2;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .panel-header h2 {
+            margin: 0;
+            color: #ffd700;
+        }
+
+        .top-toolbar {
+            grid-column: span 2;
+            display: flex;
+            gap: 10px;
+            background: #222;
+            padding: 10px;
+            border-radius: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .mode-btn {
+            background: #444;
+            color: #ccc;
+            border: 1px solid #666;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .mode-btn.active {
+            background: #ffd700;
+            color: #000;
+            border-color: #fff;
+        }
+
+        .control-group {
+            background-color: var(--group-bg);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #ddd;
+            font-size: 14px;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .flex-row span {
+            font-size: 13px;
+            color: #ccc;
+        }
+
+        input[type="file"], input[type="text"], select, input[type="number"], input[type="range"] {
+            background: #222;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 6px;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+
+        input[type="number"] {
+            width: 70px;
+        }
+
+        .char-reg-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .btn-container {
+            grid-column: span 2;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.15s ease;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background-color: #c62828 !important;
+        }
+        .btn-danger:hover {
+            background-color: #e53935 !important;
+        }
+
+        .preview-wrapper {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            padding-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+
+        #scene-container-wrapper {
+            position: relative;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.7);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #scene-container {
+            width: 1920px; 
+            height: 1080px; 
+            background-color: #222;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0; 
+        }
+        
+        .scene-row {
+            flex-shrink: 0;
+            position: relative;
+            width: 100%;
+            box-sizing: border-box;
+            display: block;
+        }
+
+        .component-thumb {
+            position: relative;
+            background-color: transparent; 
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            z-index: 3;
+        }
+        .component-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; 
+        }
+
+        .component-name {
+            position: absolute;
+            white-space: nowrap;
+            box-sizing: border-box;
+            border-radius: 4px;
+            z-index: 4;
+        }
+
+        .component-box {
+            position: absolute;
+            display: block; 
+            box-sizing: border-box;
+            border-radius: 6px;
+            word-wrap: break-word;
+            word-break: break-all;
+            width: max-content;
+            z-index: 2;
+        }
+
+        .component-narr-box {
+            position: relative;
+            display: block;
+            box-sizing: border-box;
+            border-radius: 6px;
+            word-wrap: break-word;
+            word-break: break-all;
+            width: max-content;
+            z-index: 2;
+        }
+
+        .component-speech {
+            white-space: pre-wrap; 
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .component-speech[contenteditable="true"]:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        /* 서식 모드 툴팁 및 색상 피커 */
+        #text-format-tooltip {
+            position: absolute;
+            background-color: #22222b;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 7px;
+            display: none;
+            z-index: 9999;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            gap: 5px;
+            align-items: center;
+        }
+
+        #text-format-tooltip button {
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 3px;
+            background-color: #444;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        #text-format-tooltip button:hover {
+            background-color: #666;
+        }
+
+        #custom-color-picker-modal {
+            position: absolute;
+            background-color: #1a1a22;
+            border: 1px solid #ffb300;
+            border-radius: 8px;
+            padding: 12px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10000;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+            width: 180px;
+        }
+
+        #custom-color-picker-modal h4 {
+            margin: 0;
+            font-size: 11px;
+            color: #ffb300;
+            text-align: center;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 5px;
+        }
+
+        .palette-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.1s;
+        }
+
+        .palette-btn:hover {
+            transform: scale(1.15);
+            border-color: #fff;
+        }
+
+        .custom-hex-row {
+            display: flex;
+            gap: 4px;
+        }
+
+        .custom-hex-row input {
+            flex: 1;
+            font-size: 11px;
+            padding: 4px 6px;
+            text-align: center;
+        }
+
+        .custom-hex-row button {
+            padding: 4px 8px;
+            font-size: 11px;
+            background-color: #ffb300;
+            color: #000;
+        }
+
+        /* --- 개선: 화면 초과 / 레이아웃 프리셋 / 캐릭터·감정 관리 --- */
+        .overflow-status {
+            margin-top: 8px; padding: 8px 10px; border-radius: 5px; font-size: 12px; font-weight: bold;
+            background: #24352a; color: #69f0ae; border: 1px solid #3f6b4b;
+        }
+        .overflow-status.warn { background:#452b2b; color:#ff8a80; border-color:#8e4a4a; }
+        .overflow-status.caution { background:#493d22; color:#ffd180; border-color:#8a7038; }
+        .preset-row { display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+        .preset-row input[type="text"] { min-width:150px; flex:1; }
+        .preset-row select { min-width:180px; flex:1; }
+        .char-tools { display:flex; gap:7px; flex-wrap:wrap; margin:8px 0 10px; }
+        .char-tools button { background:#546e7a; padding:5px 9px; font-size:12px; }
+        .char-reg-item { padding:5px; border-radius:5px; }
+        .char-reg-item[data-emotion="true"] { background:rgba(255,193,7,0.06); }
+        .char-kind-badge { font-size:10px; color:#bbb; min-width:54px; text-align:center; line-height:1.2; }
+        .char-kind-badge .emotion { color:#ffd54f; font-weight:bold; }
+        .char-mini-btn { background:#455a64 !important; padding:4px 7px !important; font-size:11px !important; white-space:nowrap; }
+        .char-toolbar-search { display:flex; gap:7px; align-items:center; margin:7px 0 9px; }
+        .char-toolbar-search input { flex:1; min-width:180px; }
+        #char-registration { max-height:460px; overflow-y:auto; padding-right:5px; scrollbar-gutter:stable; }
+        .char-group { border:1px solid #46515a; border-radius:7px; margin-bottom:8px; overflow:hidden; background:#23282d; }
+        .char-group-header { display:flex; align-items:center; gap:8px; padding:8px 10px; background:#303840; cursor:pointer; user-select:none; position:sticky; top:0; z-index:1; }
+        .char-group-header:hover { background:#37424b; }
+        .char-group-toggle { width:18px; color:#d7dde2; font-size:12px; text-align:center; flex:none; }
+        .char-group-name { font-weight:bold; color:#fff; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .char-group-count { color:#aeb8c0; font-size:11px; white-space:nowrap; }
+        .char-group-add { background:#455a64 !important; padding:3px 7px !important; font-size:11px !important; }
+        .char-group-body { padding:4px 5px 5px; }
+        .char-group.collapsed .char-group-body { display:none; }
+        .char-group .char-reg-item { margin:3px 0; background:#272d32; }
+        .char-group .char-reg-item[data-emotion="true"] { margin-left:18px; background:rgba(255,193,7,0.06); }
+        .char-group-empty { color:#888; font-size:12px; text-align:center; padding:16px 8px; }
+
+    </style>
+<style>
+/* Studio interface — scene artwork keeps its own styles. */
+:root{--bg-dark:#101116;--panel-bg:#191b23;--group-bg:#20232d;--accent-color:#9d91f8;--accent-hover:#b3a9ff;--border-color:#303440;--text-light:#eceef5;--text-muted:#a6acbd;color-scheme:dark}
+body{padding:0;display:block;background:#101116;color:#eceef5;font-family:Inter,'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:13px;line-height:1.55}
+.studio-shell{max-width:1920px;margin:auto;padding:0 28px 28px}
+.studio-header{min-height:88px;display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #292c37}
+.studio-brand{display:flex;align-items:center;gap:13px}.studio-mark{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#b2a5ff;color:#201937;font-size:23px;font-weight:800;box-shadow:0 0 32px #a695ff13}
+.studio-brand h1{font-size:20px;letter-spacing:-.6px;margin:0;font-weight:750}.studio-brand p{margin:2px 0 0;color:#9299ac;font-size:12px}.studio-kicker{font-size:10px;letter-spacing:2px;color:#a69af0;text-transform:uppercase}
+#autosave-indicator{color:#aab3c5!important;font-size:11px!important;text-align:right;max-width:300px}
+.studio-shell>.top-toolbar{padding:14px 0;margin:0;display:flex;gap:8px;background:transparent;border-radius:0;min-height:44px;flex-wrap:wrap}
+.toolbar-space{flex:1}.toolbar-separator{height:22px;width:1px;background:#353947;margin:0 6px}
+.studio-shell button:not(.palette-btn),#control-panel-area button{background:#292d39!important;border:1px solid #3a4050!important;color:#e0e4f0!important;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;line-height:1.4;box-shadow:none;transition:background .15s,border-color .15s,transform .15s}
+.studio-shell button:not(.palette-btn):hover,#control-panel-area button:hover{background:#343a4b!important;border-color:#6d7186!important}
+.studio-shell button:active{transform:translateY(1px)}
+.studio-shell .mode-btn{border-radius:8px}.studio-shell .mode-btn.active{background:#aea1ff!important;color:#221b3d!important;border-color:#aea1ff!important}
+.studio-shell .primary-action{background:#aea1ff!important;color:#241c40!important;border-color:#aea1ff!important}.studio-shell .primary-action:hover{background:#c1b6ff!important}
+.studio-shell .btn-danger{background:#3a242d!important;border-color:#623443!important;color:#f3a9b7!important}
+.studio-workspace{display:grid;grid-template-columns:410px minmax(0,1fr);gap:22px;align-items:start}
+#control-panel-area{width:auto;max-width:none;margin:0;padding:0;display:block;background:#191c24;border:1px solid #303440;border-radius:14px;min-width:0;overflow:hidden}
+.inspector-heading{padding:18px 20px 12px;display:flex;align-items:center;justify-content:space-between}.inspector-heading strong{font-size:14px}.inspector-heading span{font-size:10px;color:#9ba2b6;letter-spacing:1px}
+.settings-tabs{display:flex;gap:4px;padding:0 12px 13px;border-bottom:1px solid #303440}.settings-tabs button{flex:1;border-color:transparent!important;background:transparent!important;color:#929bb1!important;padding:8px}.settings-tabs button[aria-selected=true]{background:#303044!important;color:#d0c6ff!important;border-color:#4e486d!important}
+.settings-scroll{max-height:calc(100vh - 280px);min-height:350px;overflow:auto;padding:6px 16px 16px;scrollbar-width:thin;scrollbar-color:#424859 transparent}
+.studio-section{border-bottom:1px solid #303440;margin:0}.studio-section:last-child{border-bottom:0}.studio-section[hidden]{display:none}.studio-section summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:16px 2px;font-weight:650;font-size:13px;color:#e0e4f0}.studio-section summary::-webkit-details-marker{display:none}.studio-section summary::after{content:'⌄';margin-left:auto;color:#8c94ab;font-size:16px;transition:transform .15s}.studio-section[open] summary::after{transform:rotate(180deg)}.section-num{font-size:10px;color:#a095db;background:#2b293b;min-width:23px;height:23px;border-radius:7px;display:grid;place-items:center;font-weight:600}
+#control-panel-area .control-group{border:none;background:transparent;margin:0;padding:0 0 18px;border-radius:0;min-width:0}
+#control-panel-area label{font-size:12px;color:#bcc4d7!important;line-height:1.65;font-weight:500;margin-bottom:8px;flex-wrap:wrap;gap:6px}
+#control-panel-area .flex-row{gap:8px;margin-bottom:12px;padding:0;align-items:center}#control-panel-area .flex-row>span{font-size:11px;color:#a6afc4!important;margin-left:0!important;font-weight:400!important}
+#control-panel-area input[type=text],#control-panel-area input[type=number],#control-panel-area select,#control-panel-area input[type=file]{background:#11141c;border:1px solid #394052;border-radius:7px;color:#e6e9f2;min-height:34px;padding:7px 9px;font-size:12px;max-width:100%}
+#control-panel-area input[type=file]{font-size:11px;padding:7px;width:100%}#control-panel-area input[type=file]::file-selector-button{background:#303649;color:#d7deee;border:0;border-radius:5px;padding:6px 9px;margin-right:8px;cursor:pointer;font-size:11px}
+#control-panel-area input[type=number]{font-variant-numeric:tabular-nums}#control-panel-area input[type=checkbox]{accent-color:#aa9af9;width:15px;height:15px;cursor:pointer;flex-shrink:0}#control-panel-area input[type=range]{accent-color:#aa9af9;background:transparent;border:0;padding:0;min-height:24px}#control-panel-area input[type=color]{width:32px;height:30px;padding:2px;border:1px solid #454d62;border-radius:6px;background:#171b26;cursor:pointer}
+.studio-shell :is(button,input,select,summary):focus-visible{outline:2px solid #b4a8ff;outline-offset:3px}
+#control-panel-area .char-tools{gap:6px}#control-panel-area .char-tools button{font-size:10px;padding:6px 8px}#control-panel-area .char-reg-item{background:#1c202c;border:1px solid #333b50;border-radius:8px;padding:9px;gap:7px;flex-wrap:wrap}#control-panel-area .char-group{border-color:#353d50;background:#161a23;border-radius:9px}#control-panel-area .char-group-header{background:#242a38}#control-panel-area .char-group-name{color:#dce1ed}#control-panel-area .char-group-count{color:#9da8c1}
+#control-panel-area .preset-row{gap:7px;flex-wrap:wrap}#control-panel-area .preset-row select,#control-panel-area .preset-row input{flex:1;min-width:120px}#control-panel-area .overflow-status{border:1px solid #34534c;background:#192c29;color:#add5c5;font-size:11px;padding:10px;border-radius:8px;line-height:1.6}#control-panel-area .overflow-status.warn{border-color:#7a4848;background:#392427;color:#f1b7ba}#control-panel-area .overflow-status.caution{border-color:#555142;background:#2d2b24;color:#d6cca6}
+.preview-panel{min-width:0;position:sticky;top:20px;border:1px solid #303440;border-radius:14px;background:#191c24;overflow:hidden}.preview-panel-header{padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #303440}.preview-panel-header h2{margin:0;font-size:14px;font-weight:650}.preview-panel-header p{margin:3px 0 0;color:#969fb4;font-size:11px}.preview-tools{display:flex;align-items:center;gap:8px}.preview-tools button{padding:6px 9px;font-size:10px}.preview-tools output{color:#c6c1df;min-width:40px;text-align:right;font-size:11px;font-variant-numeric:tabular-nums}
+.preview-wrapper{box-sizing:border-box;width:100%;max-width:none;min-height:380px;max-height:70vh;padding:28px;display:block;overflow:auto;position:relative;background-color:#12151d;background-image:radial-gradient(#353c4a 1px,transparent 1px);background-size:18px 18px}
+#scene-container-wrapper{margin:0 auto;position:relative;flex-shrink:0;border-radius:3px;box-shadow:0 12px 42px #0007;overflow:hidden}#scene-container{transform-origin:top left}
+.preview-empty{position:absolute;inset:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;pointer-events:none;background:#161922d9;border:1px dashed #45475d;border-radius:8px;color:#c5cadd}.preview-empty[hidden]{display:none}.preview-empty .empty-icon{font-size:30px;color:#b7a9f7;margin-bottom:4px}.preview-empty strong{font-size:16px;font-weight:600}.preview-empty p{font-size:12px;color:#929db5;margin:0;max-width:300px;line-height:1.8}.preview-empty button{pointer-events:auto;margin-top:10px}
+.preview-footer{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #303440}.preview-footer p{margin:0;color:#9ca5ba;font-size:11px}.preview-footer .btn-container{margin:0;display:flex;gap:8px;text-align:left}.preview-footer .btn-container button{margin:0!important;padding:10px 14px!important;font-size:12px!important}.preview-meta{display:flex;gap:14px;color:#9ea7bd;font-size:11px;padding:11px 20px;border-top:1px solid #2d3341}.preview-meta strong{font-weight:500;color:#ded8f4}
+#text-format-tooltip,#custom-color-picker-modal{border-color:#665b92;background:#222331;border-radius:10px;box-shadow:0 10px 32px #0008}
+@media(min-width:1600px){.studio-workspace{grid-template-columns:450px minmax(0,1fr)}}
+@media(max-width:1050px){.studio-shell{padding:0 16px 20px}.studio-workspace{grid-template-columns:350px minmax(0,1fr);gap:14px}.preview-panel-header,.preview-footer{flex-wrap:wrap}.preview-wrapper{padding:18px}.preview-empty{inset:18px}.toolbar-space{display:none}}
+@media(max-width:780px){.studio-shell{padding:0 12px 20px}.studio-header{min-height:82px}.studio-brand h1{font-size:17px}.studio-brand p{font-size:10px}#autosave-indicator{max-width:140px;font-size:10px!important}.studio-workspace{grid-template-columns:1fr}.preview-panel{position:relative;top:0;order:0}#control-panel-area{order:1}.settings-scroll{max-height:none;min-height:0}.preview-wrapper{min-height:220px;padding:14px}.preview-empty{inset:14px}.top-toolbar button{font-size:10px;padding:7px 9px}.toolbar-separator{display:none}.preview-footer{padding:12px}.preview-footer p{display:none}.preview-panel-header{padding:14px}.preview-meta{padding:10px 14px}.studio-mark{width:36px;height:36px}.studio-brand{gap:9px}}
+@media(prefers-reduced-motion:reduce){.studio-shell *{transition:none!important}}
+</style>
+<style>
+.preview-layout-controls{padding:14px 20px;border-top:1px solid #303440;background:#1c1f2a}
+.preview-layout-heading{display:flex;align-items:center;gap:12px;margin-bottom:10px}.preview-layout-heading strong{font-size:12px;color:#d8d0fc;font-weight:650}.preview-layout-heading span{font-size:11px;color:#969fb4}
+.preview-layout-row{display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap}.preview-layout-row label{display:inline-flex;align-items:center;gap:7px;margin:0;font-size:12px;font-weight:500;color:#c7cede;cursor:pointer;line-height:1.6}.preview-layout-row input[type=checkbox]{width:15px;height:15px;margin:0;accent-color:#aa9af9;flex-shrink:0;cursor:pointer}.preview-layout-row button{padding:7px 11px;font-size:11px}.preview-tools button[aria-pressed=true]{border-color:#7e719f!important;background:#353047!important}
+@media(max-width:780px){.preview-layout-controls{padding:12px 14px}.preview-layout-row{gap:12px}.preview-layout-heading{gap:8px;flex-wrap:wrap}}
+</style>
+<style>
+@media(min-width:781px) and (max-height:900px){.studio-header{min-height:66px}.studio-shell>.top-toolbar{padding:9px 0;gap:6px}.preview-panel-header{padding:11px 16px}.preview-panel-header p{display:none}.preview-layout-controls{padding:10px 16px}.preview-layout-heading{margin-bottom:7px}.preview-meta{padding:7px 16px}.preview-footer{padding:10px 16px}.preview-wrapper{padding:16px}.studio-shell{padding-bottom:12px}.preview-footer p{display:none}.studio-brand p{display:none}}
+@media(min-width:781px) and (max-height:720px){.studio-header{min-height:55px}.studio-brand h1{font-size:17px}.studio-kicker{display:none}.preview-layout-heading span{display:none}.preview-layout-controls{padding:8px 14px}.preview-meta{padding:5px 14px}.preview-wrapper{padding:12px}.preview-footer .btn-container button{padding:8px 12px!important}}
+</style><style>
+/* Consistent action / preference grouping. */
+.preview-layout-row{gap:12px 16px;align-items:center}
+.preview-layout-row .fit-now-action{min-height:36px;padding:8px 14px;font-size:12px;white-space:nowrap;border-color:#6b5b98!important;background:#353044!important;color:#e4dcff!important;flex-shrink:0}
+.preview-layout-row .fit-now-action:hover{background:#44395b!important;border-color:#ad99e4!important}
+.preview-layout-options{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.preview-layout-options label{min-height:36px;box-sizing:border-box;padding:7px 10px;border:1px solid #3b4152;border-radius:7px;background:#202532;white-space:nowrap;transition:background .15s,border-color .15s}
+.preview-layout-options label:hover{background:#2a3040;border-color:#68708a}
+.preview-layout-options label:has(input:checked){background:#29283a;border-color:#62567c;color:#e1daf4}
+.preview-layout-options label:focus-within{outline:2px solid #b4a8ff;outline-offset:2px}
+.preview-layout-options input:focus-visible{outline:none}
+.preview-tools{flex-wrap:wrap;justify-content:flex-end;row-gap:6px}
+.preview-footer .btn-container{margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.preview-meta{flex-wrap:wrap;gap:5px 14px;font-variant-numeric:tabular-nums}
+.preview-layout-heading{line-height:1.5}
+@media(max-width:1050px){.preview-layout-heading{align-items:flex-start;flex-wrap:wrap;gap:4px 10px}.preview-layout-options{gap:7px}.preview-layout-options label{font-size:11px;padding:7px 9px}}
+@media(max-width:480px){.preview-layout-row{align-items:stretch;gap:9px}.preview-layout-row .fit-now-action{width:100%}.preview-layout-options{width:100%}.preview-layout-options label{flex:1;justify-content:center;min-width:0;white-space:normal;font-size:11px}.preview-footer .btn-container{width:100%}.preview-footer .btn-container button{flex:1;white-space:nowrap}}
+</style>
+</head>
+<body>
+
+    <div id="control-panel-area">
+        <div class="panel-header">
+            <h2>🎬 대사 리딩 장면 메이커</h2>
+            <span id="autosave-indicator" style="font-size: 12px; color: #888;"></span>
+        </div>
+
+        <div class="top-toolbar">
+            <button type="button" onclick="handleUndo()" style="background-color: #455a64;">↩️ 되돌리기 (Ctrl+Z)</button>
+            <button type="button" onclick="handleRedo()" style="background-color: #455a64;">↪️ 다시실행 (Ctrl+Y)</button>
+            <button type="button" class="mode-btn active" id="mode-normal" onclick="switchControlMode('normal')">👁️ 일반 편집 모드</button>
+            <button type="button" class="mode-btn" id="mode-format" onclick="switchControlMode('format')">✍️ 서식 드래그 모드</button>
+            <button type="button" onclick="exportProjectPackage()" style="background-color: #7B1FA2;">📤 프로젝트 패키지 내보내기 (.zip)</button>
+            <button type="button" onclick="document.getElementById('import-zip-input').click()" style="background-color: #FF8F00;">📥 프로젝트 패키지 불러오기 (.zip)</button>
+            <input type="file" id="import-zip-input" accept=".zip" style="display: none;" onchange="importProjectPackage(this)">
+        </div>
+        
+        <div>
+            <div class="control-group">
+                <label>1. 배경 이미지 선택 (이미지 원본 크기로 자동 매칭)</label>
+                <input type="file" id="bg-input" accept="image/*" style="width:100%;">
+                <div id="bg-resolution-info" style="font-size: 12px; color: #00e676; margin-top: 5px; font-weight: bold;">현재 감지된 해상도: 1920x1080 px</div>
+            </div>
+
+            <div class="control-group">
+                <label style="display:flex; align-items:center; justify-content:space-between;">
+                    <span>2. 캐릭터 썸네일 등록 (동일이름 다중감정은 <b>이름:감정</b> 형태로 입력. 예: 아케히:놀람)</span>
+                    <span style="font-size:12px; font-weight:normal; display:flex; align-items:center; gap:4px;" title="켜면 캐릭터별로 이름/대사/대사박스 색상을 각자 다르게 지정할 수 있습니다">
+                        <input type="checkbox" id="enable-char-style-override" class="app-setting-input" onchange="toggleCharStyleOverrideMaster()"> 캐릭터별 스타일 오버라이드
+                    </span>
+                </label>
+                <div class="char-tools">
+                    <button type="button" onclick="addCharRow()">+ 캐릭터 추가</button>
+                    <button type="button" onclick="addCharactersFromScript()">🪄 대본에서 자동 등록</button>
+                    <button type="button" onclick="sortCharacterRowsByName()">↕ 이름/감정 정렬</button>
+                    <button type="button" onclick="setAllCharacterGroupsCollapsed(true)">▸ 모두 접기</button>
+                    <button type="button" onclick="setAllCharacterGroupsCollapsed(false)">▾ 모두 펼치기</button>
+                </div>
+                <div class="char-toolbar-search">
+                    <input type="text" id="char-search-input" placeholder="캐릭터 또는 감정 검색" oninput="filterCharacterGroups(this.value)">
+                    <span id="char-search-count" style="font-size:11px;color:#999;white-space:nowrap;"></span>
+                </div>
+                <div id="char-registration"></div>
+            </div>
+
+            <div class="control-group">
+                <label>3. 대본 텍스트 파일(.txt) 선택</label>
+                <input type="file" id="text-input" accept=".txt" style="width:100%;">
+            </div>
+
+            <div class="control-group">
+                <label style="display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" id="auto-fit-scene" class="app-setting-input" checked> 불러올 때 화면에 자동 맞춤
+                </label>
+                <div style="font-size:11px; color:#999; margin:4px 0 8px;">이미지 크기와 대본 분량에 맞춰 화면을 넓게 활용하고, 들어갈 수 있는 큰 글자 크기를 우선 적용합니다. 내용이 길면 2쪽으로 배치합니다.</div>
+                <button type="button" onclick="captureDeltaStart(); fitSceneToContent(true); recordHistory(); renderSceneDOM();" style="margin-bottom:12px;">지금 화면에 다시 맞추기</button>
+                <label style="display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" id="dual-page-toggle" class="app-setting-input"> 한 장에 2쪽 넣기 (좌우 분할 배치)
+                </label>
+                <div style="font-size:11px; color:#999; margin:4px 0 8px;">대본이 길어서 한 화면에 안 들어가면, 왼쪽을 먼저 채운 뒤 자동으로 오른쪽으로 이어서 배치합니다. 대사·지문 상자의 최대 너비는 각 쪽의 남은 공간에 맞춰 자동으로 줄어듭니다.</div>
+                <label style="display:flex; align-items:center; gap:6px; margin-top:8px;">
+                    <input type="checkbox" id="auto-dialogue-spacing" class="app-setting-input" checked> 대사 겹침 방지 · 간격 자동 조정
+                </label>
+                <div style="font-size:11px; color:#999; margin:4px 0 8px;">켜면 대사·이름 상자의 높이에 맞춰 다음 캐릭터를 아래로 밀고, 최소 8px 간격을 확보합니다. 1쪽·2쪽 모두 적용됩니다. 끄면 설정한 간격으로 배치합니다.</div>
+                <div class="flex-row">
+                    <span style="font-size:12px;">중앙 구분선:</span>
+                    <select id="divider-style" class="app-setting-input">
+                        <option value="line">표시 (실선)</option>
+                        <option value="transparent">숨김 (투명)</option>
+                    </select>
+                </div>
+                <div id="overflow-status" class="overflow-status">✅ 현재 내용이 화면 안에 들어옵니다.</div>
+            </div>
+            
+            <div class="control-group">
+                <label>4. 기본 글꼴 및 줄 배정 레이아웃</label>
+                <div class="flex-row">
+                    <select id="font-select" class="app-setting-input" onchange="toggleCustomFont(this.value)" style="width: 45%;">
+			<option value="'KoPubWorld Batang', serif">KoPubWorld 바탕체 Medium</option>
+                        <option value="'Malgun Gothic', sans-serif">맑은 고딕</option>
+                        <option value="'Apple SD Gothic Neo', sans-serif">애플 고딕</option>
+                        <option value="'Nanum Gothic', sans-serif">나눔 고딕</option>
+                        <option value="Georgia, serif">Georgia</option>
+                        <option value="custom">직접 입력...</option>
+                    </select>
+                    <input type="text" id="font-custom-input" class="app-setting-input" placeholder="시스템 폰트명" style="width: 50%; display:none;">
+                </div>
+                <div class="flex-row" style="margin-top:10px;">
+                    <span>상단 시작(Y):</span>
+                    <input type="number" id="layout-top" class="app-setting-input" value="80" style="width:65px;">
+                    <label style="display:inline-flex; align-items:center; gap:3px; font-weight:normal; color:#00e676; font-size:12px; margin:0; cursor:pointer;" title="체크하면 전체 대사 내용의 세로 높이를 자동 계산해서 화면 상하 중앙에 오도록 상단 시작(Y) 값을 자동으로 잡아줍니다.">
+                        <input type="checkbox" id="layout-top-auto" class="app-setting-input"> 중앙
+                    </label>
+                    <span>좌측 시작(X):</span>
+                    <input type="number" id="layout-left" class="app-setting-input" value="100" style="width:65px;">
+                    <label style="display:inline-flex; align-items:center; gap:3px; font-weight:normal; color:#00e676; font-size:12px; margin:0; cursor:pointer;" title="체크하면 전체 대사 내용의 가로 폭을 자동 계산해서 화면(또는 페이지) 좌우 중앙에 오도록 좌측 시작(X) 값을 자동으로 잡아줍니다.">
+                        <input type="checkbox" id="layout-left-auto" class="app-setting-input"> 중앙
+                    </label>
+                    <span>기본 행 간격(Gap):</span>
+                    <input type="number" id="layout-gap" class="app-setting-input" value="45" style="width:65px;">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>💾 레이아웃 프리셋</label>
+                <div class="preset-row">
+                    <select id="layout-preset-select"><option value="">저장된 프리셋 선택</option></select>
+                    <button type="button" onclick="applyLayoutPreset()" style="background:#1976D2;">적용</button>
+                    <button type="button" onclick="deleteLayoutPreset()" class="btn-danger">삭제</button>
+                </div>
+                <div class="preset-row" style="margin-top:7px;">
+                    <input type="text" id="layout-preset-name" placeholder="새 프리셋 이름">
+                    <button type="button" onclick="saveLayoutPreset()" style="background:#6A1B9A;">현재 설정 저장</button>
+                </div>
+                <div style="font-size:11px; color:#999; margin-top:6px;">글꼴·위치·크기·색상·간격·듀얼페이지 등 현재 레이아웃 설정만 저장합니다. 대본/이미지는 포함하지 않습니다.</div>
+            </div>
+
+            <div class="control-group">
+                <label>🔧 텍스트 간격 & 박스 라운딩 옵션</label>
+                <div class="flex-row">
+                    <span>줄간격(Line Height):</span>
+                    <input type="range" id="line-height-range" class="app-setting-input" min="1.0" max="2.5" step="0.1" value="1.6" style="width:100px;" oninput="syncOpacity('line-height-range', 'line-height-num')">
+                    <input type="number" id="line-height-num" class="app-setting-input" min="1.0" max="2.5" step="0.1" value="1.6" style="width:55px;" oninput="syncOpacity('line-height-num', 'line-height-range')">
+                    <span style="margin-left:15px;">자간(Letter Spacing):</span>
+                    <input type="number" id="letter-spacing-num" class="app-setting-input" value="0" style="width:55px;"><span>px</span>
+                </div>
+                <div class="flex-row" style="margin-top:8px;">
+                    <label style="display:flex; align-items:center; gap:5px; color:#fff; cursor:pointer;">
+                        <input type="checkbox" id="box-rounded-toggle" class="app-setting-input" checked> <b>박스 모서리 둥글게(라운딩) 적용</b>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="control-group">
+                <label>5. 썸네일 프레임 크기 설정</label>
+                <div class="flex-row">
+                    <span>최대 프레임 크기:</span>
+                    <input type="number" id="thumb-size" class="app-setting-input" value="100" style="width:70px;">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>6. 캐릭터 이름 위치 & 색상 & 배경 박스 설정</label>
+                <div class="flex-row">
+                    <span>글자 크기:</span>
+                    <input type="number" id="size-name" class="app-setting-input" value="24" style="width:65px;">
+                    <span>우측 이동(X):</span>
+                    <input type="number" id="name-x" class="app-setting-input" value="125" style="width:65px;">
+                    <span>하단 이동(Y):</span>
+                    <input type="number" id="name-y" class="app-setting-input" value="8" style="width:65px;">
+                    <label style="display:inline; margin-left:10px; color:#fff;"><input type="checkbox" id="bold-name" class="app-setting-input" checked> <b>Bold</b></label>
+                </div>
+                <div class="flex-row" style="margin-top:5px;">
+                    <span>🎨 글씨 색상:</span>
+                    <input type="color" id="color-name" class="app-setting-input" value="#ffd700">
+                    <span style="margin-left:15px;">🟥 상자 색상:</span>
+                    <input type="color" id="name-bg-color" class="app-setting-input" value="#000000">
+                    <span>투명도:</span>
+                    <input type="range" id="name-bg-opacity" class="app-setting-input" min="0" max="100" value="0" style="width:80px;" oninput="syncOpacity('name-bg-opacity', 'name-bg-opacity-num')">
+                    <input type="number" id="name-bg-opacity-num" class="app-setting-input" min="0" max="100" value="0" style="width:55px;" oninput="syncOpacity('name-bg-opacity-num', 'name-bg-opacity')"> <span>%</span>
+                </div>
+                <div class="flex-row" style="margin-top:5px;">
+                    <span>이름 박스 내부 가로여백:</span>
+                    <input type="number" id="pad-name-x" class="app-setting-input" value="0" style="width:65px;">
+                    <span>세로여백:</span>
+                    <input type="number" id="pad-name-y" class="app-setting-input" value="0" style="width:65px;">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>7. 대사 박스 위치 & 색상 & 아래 추가 여백</label>
+                <div class="flex-row">
+                    <span>글자 크기:</span>
+                    <input type="number" id="size-speech" class="app-setting-input" value="24" style="width:65px;">
+                    <span>우측 이동(X):</span>
+                    <input type="number" id="speech-x" class="app-setting-input" value="240" style="width:65px;">
+                    <span>하단 이동(Y):</span>
+                    <input type="number" id="speech-y" class="app-setting-input" value="0" style="width:65px;">
+                    <label style="display:inline; margin-left:10px; color:#fff;"><input type="checkbox" id="bold-speech" class="app-setting-input"> <b>Bold</b></label>
+                </div>
+                <div class="flex-row" style="margin-top:5px;">
+                    <span>최대 박스 너비:</span>
+                    <input type="number" id="speech-max-w" class="app-setting-input" value="1200" style="width:75px;">
+                    <span style="color:#00ff55; font-weight:bold; margin-left:15px;">⬇️ 대사 밑 여백:</span>
+                    <input type="number" id="speech-margin-bottom" class="app-setting-input" value="0" style="width:65px;">
+                </div>
+                <div class="flex-row" style="margin-top:5px;">
+                    <span>상자 색상:</span>
+                    <input type="color" id="bg-color" class="app-setting-input" value="#000000">
+                    <span>투명도:</span>
+                    <input type="range" id="bg-opacity" class="app-setting-input" min="0" max="100" value="75" style="width:80px;" oninput="syncOpacity('bg-opacity', 'bg-opacity-num')">
+                    <input type="number" id="bg-opacity-num" class="app-setting-input" min="0" max="100" value="75" style="width:55px;" oninput="syncOpacity('bg-opacity-num', 'bg-opacity')"> <span>%</span>
+                    <span style="margin-left:15px;">🎨 대사 색상:</span>
+                    <input type="color" id="color-speech" class="app-setting-input" value="#ffffff">
+                </div>
+                <div class="flex-row" style="margin-top:5px;">
+                    <span>박스 내부 가로여백:</span>
+                    <input type="number" id="pad-speech-x" class="app-setting-input" value="25" style="width:65px;">
+                    <span>세로여백:</span>
+                    <input type="number" id="pad-speech-y" class="app-setting-input" value="15" style="width:65px;">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>8. 지문 박스 위치 & 색상 & 위/아래 추가 여백</label>
+                <div class="flex-row">
+                    <span>글자 크기:</span>
+                    <input type="number" id="size-narr" class="app-setting-input" value="24" style="width:65px;">
+                    <span>우측 이동(X):</span>
+                    <input type="number" id="narr-x" class="app-setting-input" value="240" style="width:65px;">
+                    <span>최대 박스 너비:</span>
+                    <input type="number" id="narr-max-w" class="app-setting-input" value="1350" style="width:75px;">
+                    <label style="display:inline; margin-left:10px; color:#fff;"><input type="checkbox" id="bold-narr" class="app-setting-input"> <b>Bold</b></label>
+                </div>
+                <div class="flex-row" style="margin-top:5px;">
+                    <span>상자 색상:</span>
+                    <input type="color" id="narr-bg-color" class="app-setting-input" value="#232323">
+                    <span>투명도:</span>
+                    <input type="range" id="narr-bg-opacity" class="app-setting-input" min="0" max="100" value="65" style="width:80px;" oninput="syncOpacity('narr-bg-opacity', 'narr-bg-opacity-num')">
+                    <input type="number" id="narr-bg-opacity-num" class="app-setting-input" min="0" max="100" value="65" style="width:55px;" oninput="syncOpacity('narr-bg-opacity-num', 'narr-bg-opacity')"> <span>%</span>
+                    <span style="margin-left:15px;">🎨 지문 색상:</span>
+                    <input type="color" id="color-narr" class="app-setting-input" value="#e0e0e0">
+                </div>
+                <div class="flex-row" style="margin-top:5px;">
+                    <span>박스 내부 가로여백:</span>
+                    <input type="number" id="pad-narr-x" class="app-setting-input" value="30" style="width:65px;">
+                    <span>세로여백:</span>
+                    <input type="number" id="pad-narr-y" class="app-setting-input" value="15" style="width:65px;">
+                </div>
+                <div class="flex-row" style="margin-top:5px;">
+                    <span style="color:#00e676; font-weight:bold;">⬆️ 지문 위 여백:</span>
+                    <input type="number" id="narr-margin-top" class="app-setting-input" value="0" style="width:65px;">
+                    <span style="color:#00ff55; font-weight:bold; margin-left:15px;">⬇️ 지문 밑 여백:</span>
+                    <input type="number" id="narr-margin-bottom" class="app-setting-input" value="0" style="width:65px;">
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-container">
+            <button onclick="buildSceneUI()" style="background-color: #008CBA; padding: 12px 40px; font-size: 16px;">⚡ 장면 빌드 및 스타일 적용</button>
+            <button onclick="downloadSceneCanvas()" style="background-color: #E74C3C; margin-left: 15px; padding: 12px 40px; font-size: 16px;">💾 초고해상도 PNG 다운로드</button>
+        </div>
+    </div>
+
+    <div class="preview-wrapper" id="preview-wrapper-zone">
+        <div id="scene-container-wrapper">
+            <div id="scene-container"></div>
+        </div>
+
+        <div id="text-format-tooltip">
+            <div><button onclick="applyFormat('[b]')"><b>B</b></button></div>
+            <div><button onclick="applyFormat('[i]')"><i>i</i></button></div>
+            <div><button onclick="applyFormat('[u]')"><u>U</u></button></div>
+            <div><button onclick="applyFormat('[s]')"><s>S</s></button></div>
+            <div><button onclick="toggleColorPickerModal(event)">HEX</button></div>
+            <div><button onclick="promptSizeFormat()">Size</button></div>
+            <div><button onclick="clearSelectedTags()" style="background-color:#666;">제거</button></div>
+        </div>
+
+        <div id="custom-color-picker-modal">
+            <h4>원클릭 대표색 & 지정</h4>
+            <div class="palette-grid">
+                <button type="button" class="palette-btn" style="background-color:#000000;" onclick="applyPresetColor('#000000')"></button>
+                <button type="button" class="palette-btn" style="background-color:#ffffff;" onclick="applyPresetColor('#ffffff')"></button>
+                <button type="button" class="palette-btn" style="background-color:#ff0000;" onclick="applyPresetColor('#ff0000')"></button>
+                <button type="button" class="palette-btn" style="background-color:#0000ff;" onclick="applyPresetColor('#0000ff')"></button>
+                <button type="button" class="palette-btn" style="background-color:#ffff00;" onclick="applyPresetColor('#ffff00')"></button>
+                <button type="button" class="palette-btn" style="background-color:#00ff00;" onclick="applyPresetColor('#00ff00')"></button>
+            </div>
+            <div class="custom-hex-row">
+                <input type="text" id="custom-hex-input" placeholder="#FF5555" maxlength="7" value="#ff5555">
+                <button type="button" onclick="applyCustomColorInput()">적용</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 애플리케이션 상태 및 에셋 관리 ---
+        let currentTargetWidth = 1920;
+        let currentTargetHeight = 1080;
+        let scriptFileName = "대사리딩장면_결과물";
+        let scriptRawText = "";
+        let currentControlMode = "normal";
+
+        let parsedBlocks = []; 
+        let appAssets = new Map(); 
+        const collapsedCharacterGroups = new Set();
+        let characterSearchQuery = '';
+        let bgAssetId = null;
+        const __measureCanvas = document.createElement('canvas');
+        const __measureCtx = __measureCanvas.getContext('2d');
+
+        const MAX_HISTORY = 30;
+        const historyStack = { undoStack: [], redoStack: [] };
+        let deltaTransitionSnapshot = null;
+
+        // --- 2. AST BBCode 파서 엔진 ---
+        class ASTNode {
+            constructor(type, value = null) {
+                this.type = type;
+                this.value = value;
+                this.children = [];
+            }
+        }
+
+        function parseBBCodeToAST(text) {
+            let root = new ASTNode("root");
+            let activeStack = [root];
+            let i = 0;
+
+            while (i < text.length) {
+                if (text[i] === '\\' && i + 1 < text.length) {
+                    appendCharNode(activeStack[activeStack.length - 1], text[i + 1]);
+                    i += 2;
+                    continue;
+                }
+
+                if (text[i] === '[') {
+                    let closeBracket = text.indexOf(']', i);
+                    if (closeBracket !== -1) {
+                        let tagContent = text.substring(i + 1, closeBracket);
+                        let isClose = tagContent.startsWith('/');
+                        let tagRaw = isClose ? tagContent.substring(1) : tagContent;
+                        let tagName = tagRaw.split('=')[0].toLowerCase();
+                        let tagVal = tagRaw.includes('=') ? tagRaw.substring(tagRaw.indexOf('=') + 1) : null;
+
+                        const validTags = ["b", "i", "u", "s", "color", "size"];
+                        const isColorHex = tagName.startsWith('#');
+
+                        if (validTags.includes(tagName) || isColorHex) {
+                            if (!isClose) {
+                                let nodeType = isColorHex ? "color" : tagName;
+                                let newNode = new ASTNode(nodeType, isColorHex ? tagRaw : tagVal);
+                                activeStack[activeStack.length - 1].children.push(newNode);
+                                activeStack.push(newNode);
+                            } else {
+                                let matchIndex = -1;
+                                for (let j = activeStack.length - 1; j >= 1; j--) {
+                                    if (activeStack[j].type === tagName || (tagName.startsWith('#') && activeStack[j].type === "color")) {
+                                        matchIndex = j; break;
+                                    }
+                                }
+                                if (matchIndex !== -1) {
+                                    activeStack.splice(matchIndex, activeStack.length - matchIndex);
+                                }
+                            }
+                            i = closeBracket + 1;
+                            continue;
+                        }
+                    }
+                }
+                appendCharNode(activeStack[activeStack.length - 1], text[i]);
+                i++;
+            }
+            return root;
+        }
+
+        function appendCharNode(parentNode, char) {
+            if (parentNode.children.length > 0 && parentNode.children[parentNode.children.length - 1].type === "text") {
+                parentNode.children[parentNode.children.length - 1].value += char;
+            } else {
+                parentNode.children.push(new ASTNode("text", char));
+            }
+        }
+
+        function renderASTToHtml(node) {
+            let innerHtml = "";
+            node.children.forEach(child => { innerHtml += renderASTToHtml(child); });
+
+            switch (node.type) {
+                case "root": return innerHtml;
+                case "text": return escapeHtml(node.value);
+                case "b": return `<span style="font-weight: bold;">${innerHtml}</span>`;
+                case "i": return `<span style="font-style: italic;">${innerHtml}</span>`;
+                case "u": return `<span style="text-decoration: underline;">${innerHtml}</span>`;
+                case "s": return `<span style="text-decoration: line-through;">${innerHtml}</span>`;
+                case "color": {
+                    const safeColor = sanitizeColorValue(node.value);
+                    return `<span style="color: ${safeColor || 'inherit'};">${innerHtml}</span>`;
+                }
+                case "size": {
+                    const safeSize = sanitizeSizeValue(node.value);
+                    return `<span style="font-size: ${safeSize !== null ? safeSize : 16}px; line-height: 1.2;">${innerHtml}</span>`;
+                }
+                default: return innerHtml;
+            }
+        }
+
+        function flattenASTToTokens(node, inheritedStyle = { b: false, i: false, u: false, s: false, color: null, size: null }) {
+            let tokens = [];
+            let currentStyle = { ...inheritedStyle };
+            if (node.type === "b") currentStyle.b = true;
+            if (node.type === "i") currentStyle.i = true;
+            if (node.type === "u") currentStyle.u = true;
+            if (node.type === "s") currentStyle.s = true;
+            if (node.type === "color") currentStyle.color = node.value;
+            if (node.type === "size") currentStyle.size = node.value;
+
+            if (node.type === "text") {
+                for (let char of node.value) tokens.push({ char, ...currentStyle });
+            } else {
+                node.children.forEach(child => { tokens = tokens.concat(flattenASTToTokens(child, currentStyle)); });
+            }
+            return tokens;
+        }
+
+        function reconstructBBCodeFromTokens(tokens) {
+            let out = "";
+            let currentStack = [];
+            for (let i = 0; i < tokens.length; i++) {
+                let t = tokens[i];
+                let targetActiveStyles = [];
+
+                if (t.b) targetActiveStyles.push({ type: 'b' });
+                if (t.i) targetActiveStyles.push({ type: 'i' });
+                if (t.u) targetActiveStyles.push({ type: 'u' });
+                if (t.s) targetActiveStyles.push({ type: 's' });
+                if (t.color) targetActiveStyles.push({ type: 'color', val: t.color });
+                if (t.size) targetActiveStyles.push({ type: 'size', val: t.size });
+
+                let matchCount = 0;
+                while (matchCount < currentStack.length && matchCount < targetActiveStyles.length) {
+                    let s = currentStack[matchCount];
+                    let tar = targetActiveStyles[matchCount];
+                    if (s.type === tar.type && s.val === tar.val) matchCount++;
+                    else break;
+                }
+
+                while (currentStack.length > matchCount) {
+                    let closedNode = currentStack.pop();
+                    out += `[/${closedNode.type}]`;
+                }
+
+                while (currentStack.length < targetActiveStyles.length) {
+                    let openNode = targetActiveStyles[currentStack.length];
+                    currentStack.push(openNode);
+                    out += openNode.val ? `[${openNode.type}=${openNode.val}]` : `[${openNode.type}]`;
+                }
+
+                out += (t.char === '[' || t.char === '\\') ? '\\' + t.char : t.char;
+            }
+            while (currentStack.length > 0) {
+                let closedNode = currentStack.pop();
+                out += `[/${closedNode.type}]`;
+            }
+            return out;
+        }
+
+        function escapeHtml(str) {
+            return str.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+        }
+
+        function isValidHexColor(str) {
+            return typeof str === "string" && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(str);
+        }
+
+        function sanitizeColorValue(raw) {
+            if (!raw || typeof raw !== "string") return null;
+            const v = raw.startsWith('#') ? raw : ('#' + raw);
+            return isValidHexColor(v) ? v : null;
+        }
+
+        function sanitizeSizeValue(raw) {
+            const n = parseFloat(raw);
+            if (isNaN(n) || !isFinite(n)) return null;
+            return Math.min(300, Math.max(1, n));
+        }
+
+        function generateUniqueId(prefix = "asset") {
+            return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+        }
+
+        function hexToRgba(hex, opacity) {
+            let c;
+            if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
+                c= hex.substring(1).split('');
+                if(c.length== 3){ c= [c[0], c[0], c[1], c[1], c[2], c[2]]; }
+                c= '0x'+c.join('');
+                return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+','+(opacity/100)+')';
+            }
+            return 'rgba(0,0,0,0.7)';
+        }
+
+        // --- 3. IndexedDB & 자동저장 시스템 ---
+        const DB_NAME = "reading_maker_db";
+        const DB_VERSION = 1;
+        const STORE_NAME = "assets";
+        const LS_KEY = "reading_maker_autosave_v2";
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = () => {
+                    if (!req.result.objectStoreNames.contains(STORE_NAME)) {
+                        req.result.createObjectStore(STORE_NAME);
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function persistAssetToDB(id, blob) {
+            try {
+                const db = await openDB();
+                await new Promise((resolve, reject) => {
+                    const tx = db.transaction(STORE_NAME, "readwrite");
+                    tx.oncomplete = resolve;
+                    tx.onerror = () => reject(tx.error || new Error('이미지 저장 실패'));
+                    tx.onabort = () => reject(tx.error || new Error('이미지 저장 취소'));
+                    tx.objectStore(STORE_NAME).put(blob, id);
+                });
+                db.close();
+            } catch (err) { console.warn("Asset persist error", err); throw err; }
+        }
+
+        async function deleteAssetFromDB(id) {
+            try {
+                const db = await openDB();
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.objectStore(STORE_NAME).delete(id);
+            } catch (err) { }
+        }
+
+        async function clearAllAssetsDB() {
+            try {
+                const db = await openDB();
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.objectStore(STORE_NAME).clear();
+            } catch (err) { }
+        }
+
+        async function loadAssetFromDB(id) {
+            try {
+                const db = await openDB();
+                return new Promise((resolve) => {
+                    const tx = db.transaction(STORE_NAME, "readonly");
+                    const req = tx.objectStore(STORE_NAME).get(id);
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => resolve(null);
+                });
+            } catch (err) { return null; }
+        }
+
+        function registerAsset(id, blob) {
+            if (appAssets.has(id)) {
+                appAssets.get(id).refCount++;
+            } else {
+                const url = URL.createObjectURL(blob);
+                appAssets.set(id, { blob, url, refCount: 1, _persisted: false });
+            }
+            return id;
+        }
+
+        function releaseAsset(id) {
+            if (!id || !appAssets.has(id)) return;
+            const asset = appAssets.get(id);
+            asset.refCount = Math.max(0, (asset.refCount || 1) - 1);
+            // 즉시 삭제하지 않는다. Undo/Redo 스냅샷이 이 에셋을 참조할 수 있으므로
+            // 히스토리에서 완전히 빠진 뒤 cleanupUnusedAssets()가 안전하게 정리한다.
+        }
+
+        function collectReferencedAssetIds() {
+            const refs = new Set();
+            const addSnap = (snap) => {
+                if (!snap) return;
+                let obj = snap;
+                if (typeof snap === 'string') { try { obj = JSON.parse(snap); } catch (e) { return; } }
+                if (obj.bgAssetId) refs.add(obj.bgAssetId);
+                (obj.charRows || []).forEach(r => { if (r.assetId) refs.add(r.assetId); });
+            };
+            addSnap(getCurrentSnapshot());
+            historyStack.undoStack.forEach(tx => { addSnap(tx.before); addSnap(tx.after); });
+            historyStack.redoStack.forEach(tx => { addSnap(tx.before); addSnap(tx.after); });
+            return refs;
+        }
+
+        function cleanupUnusedAssets() {
+            const refs = collectReferencedAssetIds();
+            for (const [id, asset] of appAssets.entries()) {
+                if (!refs.has(id)) {
+                    URL.revokeObjectURL(asset.url);
+                    appAssets.delete(id);
+                    deleteAssetFromDB(id);
+                }
+            }
+        }
+
+        let autoSaveTimer = null;
+        function scheduleAutoSave() {
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(runAutoSave, 1500);
+        }
+
+        let autoSaveQueue = Promise.resolve();
+        function runAutoSave() {
+            // Store text immediately; serialize asynchronous image writes.
+            flushDirectEdits();
+            let payload, assets;
+            try {
+                payload = { savedAt: Date.now(), settings: getSettingsObject(), scriptRawText,
+                    parsedBlocks, charRows: getCharRowsData(), bgAssetId,
+                    currentTargetWidth, currentTargetHeight };
+                localStorage.setItem(LS_KEY, JSON.stringify(payload));
+                assets = Array.from(appAssets.entries());
+            } catch (error) {
+                document.getElementById('autosave-indicator').textContent = '⚠️ 자동저장 실패';
+                return Promise.resolve(false);
+            }
+            autoSaveQueue = autoSaveQueue.then(async () => {
+                try {
+                    for (const [id, asset] of assets) {
+                        if (!asset._persisted) {
+                            await persistAssetToDB(id, asset.blob);
+                            asset._persisted = true;
+                        }
+                    }
+                    const t = new Date(payload.savedAt);
+                    document.getElementById('autosave-indicator').textContent = `💾 실시간 저장됨 (${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')})`;
+                    return true;
+                } catch (error) {
+                    document.getElementById('autosave-indicator').textContent = '⚠️ 이미지 자동저장 실패 — 프로젝트 ZIP으로 보관해 주세요';
+                    return false;
+                }
+            });
+            return autoSaveQueue;
+        }
+
+        async function tryRestoreAutoSave() {
+            let raw;
+            try {
+                raw = localStorage.getItem(LS_KEY);
+            } catch (err) {
+                return false;
+            }
+            if (!raw) return false;
+
+            let payload;
+            try {
+                payload = JSON.parse(raw);
+            } catch (err) {
+                return false;
+            }
+            if (!payload) return false;
+
+            const savedDate = payload.savedAt ? new Date(payload.savedAt).toLocaleString('ko-KR') : '알 수 없음';
+            const restore = confirm(`이전 작업 내용(${savedDate} 자동저장)이 있습니다. 복원하시겠습니까?\n(취소를 누르면 새 프로젝트로 시작하고, 기존 자동저장 데이터는 삭제됩니다.)`);
+
+            if (!restore) {
+                try { localStorage.removeItem(LS_KEY); } catch (e) { }
+                await clearAllAssetsDB();
+                return false;
+            }
+
+            try {
+                if (payload.settings) applySettingsObject(payload.settings);
+                scriptRawText = payload.scriptRawText || "";
+                parsedBlocks = payload.parsedBlocks || [];
+                currentTargetWidth = payload.currentTargetWidth || 1920;
+                currentTargetHeight = payload.currentTargetHeight || 1080;
+                bgAssetId = payload.bgAssetId || null;
+
+                if (bgAssetId) {
+                    const blob = await loadAssetFromDB(bgAssetId);
+                    if (blob) registerAsset(bgAssetId, blob);
+                }
+
+                const charContainer = document.getElementById('char-registration');
+                charContainer.innerHTML = '';
+                if (payload.charRows) {
+                    for (const item of payload.charRows) {
+                        if (item.assetId) {
+                            const blob = await loadAssetFromDB(item.assetId);
+                            if (blob) registerAsset(item.assetId, blob);
+                        }
+                        addCharRow(item.name, item.assetId, { enabled: item.overrideEnabled, nameColor: item.overrideNameColor, textColor: item.overrideTextColor, boxColor: item.overrideBoxColor });
+                    }
+                }
+
+                document.getElementById('scene-container').style.width = currentTargetWidth + 'px';
+                document.getElementById('scene-container').style.height = currentTargetHeight + 'px';
+                document.getElementById('bg-resolution-info').innerText = `현재 감지된 해상도: ${currentTargetWidth}x${currentTargetHeight} px`;
+
+                renderSceneDOM();
+                document.getElementById("autosave-indicator").textContent = `✅ 이전 작업 자동 복원 완료`;
+                return true;
+            } catch (err) { 
+                alert("자동저장된 데이터를 복원하는 중 오류가 발생했습니다. 새 프로젝트로 시작합니다.");
+                return false; 
+            }
+        }
+
+        // --- 4. Undo / Redo 상태 관리 ---
+        function getCurrentSnapshot() {
+            return JSON.stringify({
+                settings: getSettingsObject(),
+                scriptRawText,
+                parsedBlocks,
+                charRows: getCharRowsData(),
+                bgAssetId,
+                currentTargetWidth,
+                currentTargetHeight
+            });
+        }
+
+        function captureDeltaStart() {
+            deltaTransitionSnapshot = getCurrentSnapshot();
+        }
+
+        function recordHistory() {
+            if (!deltaTransitionSnapshot) return;
+            const currentSnapStr = getCurrentSnapshot();
+            if (deltaTransitionSnapshot === currentSnapStr) return;
+
+            historyStack.undoStack.push({ before: deltaTransitionSnapshot, after: currentSnapStr });
+            if (historyStack.undoStack.length > MAX_HISTORY) historyStack.undoStack.shift();
+            historyStack.redoStack = [];
+            deltaTransitionSnapshot = currentSnapStr;
+            cleanupUnusedAssets();
+            scheduleAutoSave();
+        }
+
+        function handleUndo() {
+            if (historyStack.undoStack.length === 0) return;
+            const tx = historyStack.undoStack.pop();
+            historyStack.redoStack.push(tx);
+            applyHistorySnapshot(JSON.parse(tx.before));
+            cleanupUnusedAssets();
+            captureDeltaStart();
+            scheduleAutoSave();
+        }
+
+        function handleRedo() {
+            if (historyStack.redoStack.length === 0) return;
+            const tx = historyStack.redoStack.pop();
+            historyStack.undoStack.push(tx);
+            applyHistorySnapshot(JSON.parse(tx.after));
+            cleanupUnusedAssets();
+            captureDeltaStart();
+            scheduleAutoSave();
+        }
+
+        function applyHistorySnapshot(snap) {
+            applySettingsObject(snap.settings);
+            scriptRawText = snap.scriptRawText;
+            parsedBlocks = snap.parsedBlocks;
+            bgAssetId = snap.bgAssetId;
+            currentTargetWidth = snap.currentTargetWidth;
+            currentTargetHeight = snap.currentTargetHeight;
+
+            const charContainer = document.getElementById('char-registration');
+            charContainer.innerHTML = '';
+            if (snap.charRows) {
+                snap.charRows.forEach(item => addCharRow(item.name, item.assetId, { enabled: item.overrideEnabled, nameColor: item.overrideNameColor, textColor: item.overrideTextColor, boxColor: item.overrideBoxColor }));
+            }
+
+            document.getElementById('scene-container').style.width = currentTargetWidth + 'px';
+            document.getElementById('scene-container').style.height = currentTargetHeight + 'px';
+            document.getElementById('bg-resolution-info').innerText = `현재 감지된 해상도: ${currentTargetWidth}x${currentTargetHeight} px`;
+
+            renderSceneDOM();
+        }
+
+        // --- 5. 설정 및 캐릭터 DOM 제어 ---
+        const ALL_SETTING_IDS = [
+            'font-select', 'font-custom-input', 'layout-top', 'layout-left', 'layout-gap', 'layout-top-auto', 'layout-left-auto',
+            'thumb-size', 'size-name', 'name-x', 'name-y', 'color-name', 'name-bg-color', 'name-bg-opacity', 'pad-name-x', 'pad-name-y', 'bold-name',
+            'size-speech', 'speech-x', 'speech-y', 'speech-max-w', 'bg-color', 'bg-opacity', 'color-speech', 'pad-speech-x', 'pad-speech-y', 'bold-speech', 'speech-margin-bottom',
+            'size-narr', 'narr-x', 'narr-max-w', 'narr-bg-color', 'narr-bg-opacity', 'color-narr', 'pad-narr-x', 'pad-narr-y', 'bold-narr', 'narr-margin-top', 'narr-margin-bottom',
+            'enable-char-style-override', 'dual-page-toggle', 'divider-style', 'auto-dialogue-spacing', 'auto-fit-scene',
+            'line-height-range', 'letter-spacing-num', 'box-rounded-toggle'
+        ];
+
+        function getSettingsObject() {
+            const settings = {};
+            ALL_SETTING_IDS.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) settings[id] = el.type === 'checkbox' ? el.checked : el.value;
+            });
+            return settings;
+        }
+
+        function applySettingsObject(settings) {
+            ALL_SETTING_IDS.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && settings[id] !== undefined) {
+                    if (el.type === 'checkbox') el.checked = settings[id];
+                    else el.value = settings[id];
+
+                    if (id === 'font-select') toggleCustomFont(settings[id]);
+                    if (id === 'name-bg-opacity') document.getElementById('name-bg-opacity-num').value = settings[id];
+                    if (id === 'bg-opacity') document.getElementById('bg-opacity-num').value = settings[id];
+                    if (id === 'narr-bg-opacity') document.getElementById('narr-bg-opacity-num').value = settings[id];
+                    if (id === 'line-height-range') document.getElementById('line-height-num').value = settings[id];
+                    if (id === 'enable-char-style-override') {
+                        document.querySelectorAll('.char-reg-item').forEach(row => updateCharOverrideVisibility(row));
+                    }
+                }
+            });
+        }
+
+        const LAYOUT_PRESET_KEY = 'reading_maker_layout_presets_v1';
+
+        function loadLayoutPresets() {
+            try { return JSON.parse(localStorage.getItem(LAYOUT_PRESET_KEY) || '{}') || {}; }
+            catch (e) { return {}; }
+        }
+
+        function refreshLayoutPresetSelect(selectedName = '') {
+            const sel = document.getElementById('layout-preset-select');
+            if (!sel) return;
+            const presets = loadLayoutPresets();
+            sel.innerHTML = '<option value="">저장된 프리셋 선택</option>';
+            Object.keys(presets).sort((a,b) => a.localeCompare(b, 'ko')).forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name; opt.textContent = name;
+                sel.appendChild(opt);
+            });
+            if (selectedName && presets[selectedName]) sel.value = selectedName;
+        }
+
+        function saveLayoutPreset() {
+            const nameEl = document.getElementById('layout-preset-name');
+            const name = (nameEl.value || '').trim();
+            if (!name) { alert('프리셋 이름을 입력해 주세요.'); return; }
+            const presets = loadLayoutPresets();
+            if (presets[name] && !confirm(`“${name}” 프리셋을 덮어쓸까요?`)) return;
+            presets[name] = { savedAt: Date.now(), settings: getSettingsObject() };
+            localStorage.setItem(LAYOUT_PRESET_KEY, JSON.stringify(presets));
+            refreshLayoutPresetSelect(name);
+            nameEl.value = '';
+        }
+
+        function applyLayoutPreset() {
+            const sel = document.getElementById('layout-preset-select');
+            const name = sel.value;
+            if (!name) { alert('적용할 프리셋을 선택해 주세요.'); return; }
+            const presets = loadLayoutPresets();
+            if (!presets[name]) return;
+            captureDeltaStart();
+            applySettingsObject(presets[name].settings || {});
+            toggleCharStyleOverrideMaster();
+            recordHistory();
+            renderSceneDOM();
+        }
+
+        function deleteLayoutPreset() {
+            const sel = document.getElementById('layout-preset-select');
+            const name = sel.value;
+            if (!name) { alert('삭제할 프리셋을 선택해 주세요.'); return; }
+            if (!confirm(`“${name}” 프리셋을 삭제할까요?`)) return;
+            const presets = loadLayoutPresets();
+            delete presets[name];
+            localStorage.setItem(LAYOUT_PRESET_KEY, JSON.stringify(presets));
+            refreshLayoutPresetSelect();
+        }
+
+        function syncOpacity(sourceId, targetId) {
+            document.getElementById(targetId).value = document.getElementById(sourceId).value;
+        }
+
+        function toggleCustomFont(val) {
+            document.getElementById('font-custom-input').style.display = (val === 'custom') ? 'block' : 'none';
+        }
+
+        function addCharRow(nameValue = "", assetId = null, overrideData = null) {
+            const container = document.getElementById('char-registration');
+            const newRow = document.createElement('div');
+            newRow.className = 'char-reg-item';
+            if (assetId) newRow.dataset.assetId = assetId;
+
+            const ov = overrideData || {};
+            const ovEnabled = !!ov.enabled;
+            const ovNameColor = ov.nameColor || '#ffd700';
+            const ovTextColor = ov.textColor || '#ffffff';
+            const ovBoxColor = ov.boxColor || '#000000';
+
+            newRow.innerHTML = `
+                <img class="char-thumb-preview" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid #555; background:#111; display:${assetId ? 'block' : 'none'};">
+                <span class="char-kind-badge"></span>
+                <input type="text" placeholder="이름 또는 이름:감정" class="char-name-input" style="width: 20%;">
+                <input type="file" accept="image/*" class="char-thumb-input" style="width: 20%;">
+                <button type="button" class="char-mini-btn" title="같은 캐릭터의 다른 감정 행 추가">+감정</button>
+                <label class="char-override-ui" style="display:none; align-items:center; gap:3px; font-size:11px; color:#ddd; white-space:nowrap;" title="이 캐릭터만 아래 색상으로 표시 (위쪽의 '캐릭터별 스타일 오버라이드' 스위치가 켜져 있어야 실제로 적용됩니다)">
+                    <input type="checkbox" class="char-override-toggle" ${ovEnabled ? 'checked' : ''}> 개별색상
+                </label>
+                <span class="char-override-ui" style="display:none; align-items:center; gap:2px;">
+                    <span style="font-size:10px; color:#999;">이름</span>
+                    <input type="color" class="char-override-name-color" value="${ovNameColor}" title="이 캐릭터 이름 색상">
+                    <span style="font-size:10px; color:#999;">대사</span>
+                    <input type="color" class="char-override-text-color" value="${ovTextColor}" title="이 캐릭터 대사 색상">
+                    <span style="font-size:10px; color:#999;">박스</span>
+                    <input type="color" class="char-override-box-color" value="${ovBoxColor}" title="이 캐릭터 대사박스 색상">
+                </span>
+                <button type="button" class="btn-danger" style="padding: 4px 8px; font-size:12px;" onclick="removeCharRow(this)">X</button>
+            `;
+
+            const nameInput = newRow.querySelector('.char-name-input');
+            nameInput.value = nameValue || '';
+            const fileInput = newRow.querySelector('.char-thumb-input');
+            const emotionAddBtn = newRow.querySelector('.char-mini-btn');
+            const thumbPreview = newRow.querySelector('.char-thumb-preview');
+            const overrideInputs = [
+                newRow.querySelector('.char-override-toggle'),
+                newRow.querySelector('.char-override-name-color'),
+                newRow.querySelector('.char-override-text-color'),
+                newRow.querySelector('.char-override-box-color')
+            ];
+
+            if (assetId && appAssets.has(assetId)) {
+                thumbPreview.src = appAssets.get(assetId).url;
+            }
+
+            updateCharOverrideVisibility(newRow);
+            updateCharacterRowBadge(newRow);
+
+            nameInput.addEventListener('focus', captureDeltaStart);
+            nameInput.addEventListener('input', () => { updateCharacterRowBadge(newRow); });
+            nameInput.addEventListener('change', () => { refreshCharacterGroups(); recordHistory(); renderSceneDOM(); });
+            emotionAddBtn.addEventListener('click', () => addEmotionRowFrom(newRow));
+
+            overrideInputs.forEach(el => {
+                el.addEventListener('focus', captureDeltaStart);
+                el.addEventListener('change', () => { recordHistory(); renderSceneDOM(); });
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const tempUrl = URL.createObjectURL(file);
+                    const testImg = new Image();
+                    testImg.onload = function() {
+                        URL.revokeObjectURL(tempUrl);
+                        captureDeltaStart();
+                        const oldAssetId = newRow.dataset.assetId;
+                        const id = generateUniqueId("thumb");
+                        registerAsset(id, file);
+                        newRow.dataset.assetId = id;
+                        if (oldAssetId) releaseAsset(oldAssetId);
+
+                        thumbPreview.src = appAssets.get(id).url;
+                        thumbPreview.style.display = 'block';
+
+                        recordHistory();
+                        renderSceneDOM();
+                    };
+                    testImg.onerror = function() {
+                        URL.revokeObjectURL(tempUrl);
+                        alert("캐릭터 썸네일 이미지를 불러올 수 없습니다. 파일이 손상되었거나 지원하지 않는 형식입니다.");
+                        e.target.value = "";
+                    };
+                    testImg.src = tempUrl;
+                }
+            });
+
+            container.appendChild(newRow);
+            refreshCharacterGroups();
+        }
+
+        function splitCharacterKey(name) {
+            const raw = (name || '').trim();
+            const idx = raw.indexOf(':');
+            if (idx < 0) return { base: raw, emotion: '' };
+            return { base: raw.slice(0, idx).trim(), emotion: raw.slice(idx + 1).trim() };
+        }
+
+        function updateCharacterRowBadge(row) {
+            const input = row.querySelector('.char-name-input');
+            const badge = row.querySelector('.char-kind-badge');
+            if (!input || !badge) return;
+            const p = splitCharacterKey(input.value);
+            row.dataset.emotion = p.emotion ? 'true' : 'false';
+            badge.innerHTML = p.emotion ? `기본<br>${escapeHtml(p.base)}<br><span class="emotion">${escapeHtml(p.emotion)}</span>` : (p.base ? `기본<br>${escapeHtml(p.base)}` : '이름/감정');
+        }
+
+
+        function refreshCharacterGroups() {
+            const container = document.getElementById('char-registration');
+            if (!container) return;
+            const rows = Array.from(container.querySelectorAll('.char-reg-item'));
+            const groups = new Map();
+
+            rows.forEach(row => {
+                const input = row.querySelector('.char-name-input');
+                const p = splitCharacterKey(input ? input.value : '');
+                const base = p.base || '이름 미지정';
+                if (!groups.has(base)) groups.set(base, []);
+                groups.get(base).push(row);
+            });
+
+            container.innerHTML = '';
+            if (!rows.length) {
+                const empty = document.createElement('div');
+                empty.className = 'char-group-empty';
+                empty.textContent = '등록된 캐릭터가 없습니다.';
+                container.appendChild(empty);
+                updateCharacterSearchCount(0, 0);
+                return;
+            }
+
+            for (const [base, groupRows] of groups.entries()) {
+                const group = document.createElement('div');
+                group.className = 'char-group';
+                group.dataset.baseName = base;
+                if (collapsedCharacterGroups.has(base)) group.classList.add('collapsed');
+
+                const emotionCount = groupRows.filter(r => splitCharacterKey(r.querySelector('.char-name-input')?.value || '').emotion).length;
+                const header = document.createElement('div');
+                header.className = 'char-group-header';
+                header.innerHTML = `
+                    <span class="char-group-toggle">${group.classList.contains('collapsed') ? '▸' : '▾'}</span>
+                    <span class="char-group-name">${escapeHtml(base)}</span>
+                    <span class="char-group-count">기본 ${groupRows.some(r => !splitCharacterKey(r.querySelector('.char-name-input')?.value || '').emotion) ? '1' : '0'} · 감정 ${emotionCount}</span>
+                    <button type="button" class="char-group-add" title="이 캐릭터에 감정 추가">+감정</button>
+                `;
+                header.addEventListener('click', (e) => {
+                    if (e.target.closest('.char-group-add')) return;
+                    toggleCharacterGroup(base, group);
+                });
+                header.querySelector('.char-group-add').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    addEmotionForBase(base);
+                });
+
+                const body = document.createElement('div');
+                body.className = 'char-group-body';
+                groupRows.forEach(row => body.appendChild(row));
+                group.appendChild(header);
+                group.appendChild(body);
+                container.appendChild(group);
+            }
+            applyCharacterGroupFilter();
+        }
+
+        function toggleCharacterGroup(base, groupEl = null) {
+            const group = groupEl || Array.from(document.querySelectorAll('.char-group')).find(g => g.dataset.baseName === base);
+            if (!group) return;
+            const willCollapse = !group.classList.contains('collapsed');
+            group.classList.toggle('collapsed', willCollapse);
+            if (willCollapse) collapsedCharacterGroups.add(base); else collapsedCharacterGroups.delete(base);
+            const icon = group.querySelector('.char-group-toggle');
+            if (icon) icon.textContent = willCollapse ? '▸' : '▾';
+        }
+
+        function setAllCharacterGroupsCollapsed(collapsed) {
+            document.querySelectorAll('.char-group').forEach(group => {
+                const base = group.dataset.baseName;
+                group.classList.toggle('collapsed', collapsed);
+                if (collapsed) collapsedCharacterGroups.add(base); else collapsedCharacterGroups.delete(base);
+                const icon = group.querySelector('.char-group-toggle');
+                if (icon) icon.textContent = collapsed ? '▸' : '▾';
+            });
+        }
+
+        function addEmotionForBase(base) {
+            if (!base || base === '이름 미지정') return;
+            const emotion = prompt(`${base}의 감정 이름을 입력하세요.`, '놀람');
+            if (emotion === null) return;
+            const clean = emotion.trim();
+            if (!clean) return;
+            const full = `${base}:${clean}`;
+            if (getCharRowsData().some(c => c.name === full)) { alert('이미 같은 캐릭터/감정이 등록되어 있습니다.'); return; }
+            captureDeltaStart();
+            collapsedCharacterGroups.delete(base);
+            addCharRow(full);
+            recordHistory();
+            renderSceneDOM();
+        }
+
+        function filterCharacterGroups(value) {
+            characterSearchQuery = (value || '').trim().toLowerCase();
+            applyCharacterGroupFilter();
+        }
+
+        function applyCharacterGroupFilter() {
+            const q = characterSearchQuery;
+            let visibleGroups = 0;
+            let visibleRows = 0;
+            document.querySelectorAll('#char-registration .char-group').forEach(group => {
+                const base = (group.dataset.baseName || '').toLowerCase();
+                let groupMatch = !q || base.includes(q);
+                let rowMatches = 0;
+                group.querySelectorAll('.char-reg-item').forEach(row => {
+                    const name = (row.querySelector('.char-name-input')?.value || '').toLowerCase();
+                    const match = !q || groupMatch || name.includes(q);
+                    row.style.display = match ? '' : 'none';
+                    if (match) rowMatches++;
+                });
+                const show = !q || groupMatch || rowMatches > 0;
+                group.style.display = show ? '' : 'none';
+                if (show) {
+                    visibleGroups++;
+                    visibleRows += rowMatches;
+                    if (q) {
+                        group.classList.remove('collapsed');
+                        const icon = group.querySelector('.char-group-toggle');
+                        if (icon) icon.textContent = '▾';
+                    }
+                }
+            });
+            const totalGroups = document.querySelectorAll('#char-registration .char-group').length;
+            updateCharacterSearchCount(visibleGroups, totalGroups, visibleRows);
+        }
+
+        function updateCharacterSearchCount(visibleGroups, totalGroups, visibleRows = null) {
+            const el = document.getElementById('char-search-count');
+            if (!el) return;
+            if (!totalGroups) { el.textContent = ''; return; }
+            el.textContent = characterSearchQuery
+                ? `${visibleGroups}/${totalGroups} 캐릭터${visibleRows !== null ? ` · ${visibleRows}개 항목` : ''}`
+                : `${totalGroups} 캐릭터`;
+        }
+
+        function addEmotionRowFrom(row) {
+            const p = splitCharacterKey(row.querySelector('.char-name-input').value);
+            if (!p.base) { alert('먼저 캐릭터 이름을 입력해 주세요.'); return; }
+            const emotion = prompt(`${p.base}의 감정 이름을 입력하세요.`, '놀람');
+            if (emotion === null) return;
+            const clean = emotion.trim();
+            if (!clean) return;
+            const full = `${p.base}:${clean}`;
+            const exists = getCharRowsData().some(c => c.name === full);
+            if (exists) { alert('이미 같은 캐릭터/감정이 등록되어 있습니다.'); return; }
+            captureDeltaStart();
+            addCharRow(full);
+            recordHistory();
+            renderSceneDOM();
+        }
+
+        function addCharactersFromScript() {
+            if (!parsedBlocks.length) { alert('먼저 대본을 불러오거나 장면을 빌드해 주세요.'); return; }
+            const existing = new Set(getCharRowsData().map(c => c.name));
+            const keys = [];
+            parsedBlocks.forEach(b => {
+                if (b.type === 'dialogue' && b.fullCharKey && !existing.has(b.fullCharKey)) {
+                    existing.add(b.fullCharKey); keys.push(b.fullCharKey);
+                }
+            });
+            if (!keys.length) { alert('대본에 있는 캐릭터/감정이 이미 모두 등록되어 있습니다.'); return; }
+            captureDeltaStart();
+            keys.forEach(k => addCharRow(k));
+            sortCharacterRowsByName(false);
+            recordHistory();
+            renderSceneDOM();
+        }
+
+        function sortCharacterRowsByName(withHistory = true) {
+            const container = document.getElementById('char-registration');
+            const rows = Array.from(container.querySelectorAll('.char-reg-item'));
+            if (rows.length < 2) return;
+            if (withHistory) captureDeltaStart();
+            rows.sort((a,b) => {
+                const av = a.querySelector('.char-name-input').value.trim();
+                const bv = b.querySelector('.char-name-input').value.trim();
+                const ap = splitCharacterKey(av), bp = splitCharacterKey(bv);
+                const baseCmp = ap.base.localeCompare(bp.base, 'ko');
+                if (baseCmp) return baseCmp;
+                if (!ap.emotion && bp.emotion) return -1;
+                if (ap.emotion && !bp.emotion) return 1;
+                return ap.emotion.localeCompare(bp.emotion, 'ko');
+            });
+            rows.forEach(r => container.appendChild(r));
+            refreshCharacterGroups();
+            if (withHistory) { recordHistory(); renderSceneDOM(); }
+        }
+
+        function removeCharRow(btn) {
+            captureDeltaStart();
+            const row = btn.closest('.char-reg-item');
+            if (row.dataset.assetId) releaseAsset(row.dataset.assetId);
+            row.remove();
+            refreshCharacterGroups();
+            recordHistory();
+            renderSceneDOM();
+        }
+
+        function updateCharOverrideVisibility(row) {
+            const masterOn = document.getElementById('enable-char-style-override').checked;
+            row.querySelectorAll('.char-override-ui').forEach(el => {
+                el.style.display = masterOn ? 'inline-flex' : 'none';
+            });
+        }
+
+        function toggleCharStyleOverrideMaster() {
+            document.querySelectorAll('.char-reg-item').forEach(row => updateCharOverrideVisibility(row));
+        }
+
+        function getCharRowsData() {
+            const charRows = [];
+            document.querySelectorAll('.char-reg-item').forEach(row => {
+                const name = row.querySelector('.char-name-input').value.trim();
+                const assetId = row.dataset.assetId || null;
+                const overrideEnabled = row.querySelector('.char-override-toggle').checked;
+                const overrideNameColor = row.querySelector('.char-override-name-color').value;
+                const overrideTextColor = row.querySelector('.char-override-text-color').value;
+                const overrideBoxColor = row.querySelector('.char-override-box-color').value;
+                if (name) charRows.push({ name, assetId, overrideEnabled, overrideNameColor, overrideTextColor, overrideBoxColor });
+            });
+            return charRows;
+        }
+
+        function buildCharacterMaps() {
+            const masterOn = document.getElementById('enable-char-style-override').checked;
+            const thumbMap = {};
+            const styleMap = {};
+            getCharRowsData().forEach(c => {
+                if (c.assetId && appAssets.has(c.assetId)) thumbMap[c.name] = appAssets.get(c.assetId).url;
+                if (masterOn && c.overrideEnabled) {
+                    styleMap[c.name] = { nameColor: c.overrideNameColor, textColor: c.overrideTextColor, boxColor: c.overrideBoxColor };
+                }
+            });
+            return { thumbMap, styleMap };
+        }
+
+        // --- 6. 대본 해독 및 장면 DOM 렌더링 ---
+        function buildSceneUI() {
+            flushDirectEdits();
+            captureDeltaStart();
+            const textInput = document.getElementById('text-input');
+            if (textInput.files[0]) {
+                const file = textInput.files[0];
+                scriptFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    scriptRawText = e.target.result;
+                    parseScriptTextToBlocks();
+                    fitSceneToContent();
+                    recordHistory();
+                    renderSceneDOM();
+                    textInput.value = '';
+                };
+                reader.readAsText(file, 'UTF-8');
+            } else {
+                if (!parsedBlocks.length) {
+                    parseScriptTextToBlocks();
+                    fitSceneToContent();
+                }
+                recordHistory();
+                renderSceneDOM();
+            }
+        }
+
+        function parseScriptTextToBlocks() {
+            if (!scriptRawText.trim()) return;
+            const rawBlocks = scriptRawText.split(/\n\s*\n/);
+            parsedBlocks = [];
+
+            rawBlocks.forEach((block, index) => {
+                const blockText = block.trim();
+                if (!blockText) return;
+
+                if (blockText.startsWith('[') && blockText.includes(']')) {
+                    const parts = blockText.split(']');
+                    const fullCharKey = parts[0].replace('[', '').trim();
+                    const speechText = parts.slice(1).join(']').trim();
+                    parsedBlocks.push({
+                        id: `block-${index}`,
+                        type: 'dialogue',
+                        fullCharKey: fullCharKey,
+                        text: speechText
+                    });
+                } else {
+                    parsedBlocks.push({
+                        id: `block-${index}`,
+                        type: 'narrative',
+                        text: blockText
+                    });
+                }
+            });
+        }
+
+        // Read actual line boundaries, independent of browser paragraph spacing.
+        function readEditableText(element) {
+            const blockTags = new Set(['DIV', 'P']);
+            function read(parent) {
+                let text = '';
+                let previousWasBlock = false;
+                Array.from(parent.childNodes).forEach((node, index) => {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        if (previousWasBlock) text += '\n';
+                        text += node.nodeValue;
+                        previousWasBlock = false;
+                    } else if (node.nodeType === Node.ELEMENT_NODE) {
+                        const isBlock = blockTags.has(node.tagName);
+                        if (isBlock) {
+                            if (index > 0 && (previousWasBlock || !text.endsWith('\n'))) text += '\n';
+                            // A lone BR inside an empty paragraph is a caret placeholder.
+                            const placeholder = node.childNodes.length === 1 && node.firstChild.nodeName === 'BR';
+                            text += placeholder ? '' : read(node);
+                        } else {
+                            if (previousWasBlock) text += '\n';
+                            const trailingCaret = node.tagName === 'BR' && index === parent.childNodes.length - 1 && index > 0 && node.previousSibling.nodeName === 'BR';
+                            text += node.tagName === 'BR' ? (trailingCaret ? '' : '\n') : read(node);
+                        }
+                        previousWasBlock = isBlock;
+                    }
+                });
+                return text;
+            }
+            return read(element).replace(/\r\n?/g, '\n');
+        }
+
+        // Enter and Shift+Enter both insert a single line break, without a paragraph.
+        document.addEventListener('beforeinput', function(event) {
+            const editor = event.target.closest && event.target.closest('.component-speech[contenteditable="true"]');
+            if (!editor || event.isComposing || !event.cancelable) return;
+            if (event.inputType === 'insertParagraph' || event.inputType === 'insertLineBreak') {
+                event.preventDefault();
+                document.execCommand('insertLineBreak', false);
+            }
+        });
+
+        function readEditableBBCode(element) {
+            const clone = element.cloneNode(true);
+            const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+            const texts = [];
+            while (walker.nextNode()) texts.push(walker.currentNode);
+            texts.forEach(node => { node.nodeValue = node.nodeValue.replace(/[\\[]/g, '\\$&'); });
+            // Only serialize inline styles; container defaults are project settings.
+            Array.from(clone.querySelectorAll('span,b,strong,i,em,u,s,strike')).reverse().forEach(node => {
+                const tags = [];
+                const style = node.style;
+                if (['B','STRONG'].includes(node.tagName) || style.fontWeight === 'bold' || Number(style.fontWeight) >= 600) tags.push(['b', 'b']);
+                if (['I','EM'].includes(node.tagName) || style.fontStyle === 'italic') tags.push(['i', 'i']);
+                if (node.tagName === 'U' || style.textDecoration.includes('underline')) tags.push(['u', 'u']);
+                if (['S','STRIKE'].includes(node.tagName) || style.textDecoration.includes('line-through')) tags.push(['s', 's']);
+                if (style.color && style.color !== 'inherit') {
+                    const rgb = style.color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                    const color = rgb ? '#' + rgb.slice(1,4).map(v => Number(v).toString(16).padStart(2,'0')).join('') : style.color;
+                    if (isValidHexColor(color)) tags.push(['color=' + color, 'color']);
+                }
+                const size = sanitizeSizeValue(parseFloat(style.fontSize));
+                if (style.fontSize && size !== null) tags.push(['size=' + size, 'size']);
+                if (tags.length) {
+                    node.insertBefore(document.createTextNode(tags.map(t => '[' + t[0] + ']').join('')), node.firstChild);
+                    node.appendChild(document.createTextNode(tags.reverse().map(t => '[/' + t[1] + ']').join('')));
+                }
+            });
+            return readEditableText(clone);
+        }
+
+        function handleDirectTextEdit(el) {
+            const targetBlock = parsedBlocks.find(b => b.id === el.dataset.blockId);
+            if (!targetBlock) return;
+            const newText = readEditableBBCode(el);
+            if (el._serializedText === newText) return;
+            el._serializedText = newText;
+            if (targetBlock.text !== newText) {
+                captureDeltaStart();
+                targetBlock.text = newText;
+                recordHistory();
+                requestAnimationFrame(() => {
+                    document.querySelectorAll('#scene-container .scene-row').forEach(updateDialogueRowSpacing);
+                    updateDualPageFlow();
+                    updateOverflowStatus();
+                });
+            }
+        }
+
+        function flushDirectEdits() {
+            document.querySelectorAll('.component-speech[contenteditable="true"]').forEach(handleDirectTextEdit);
+        }
+
+        document.addEventListener('input', event => {
+            const editor = event.target.closest && event.target.closest('.component-speech[contenteditable="true"]');
+            if (editor && !event.isComposing) handleDirectTextEdit(editor);
+        });
+        document.addEventListener('compositionend', event => {
+            const editor = event.target.closest && event.target.closest('.component-speech[contenteditable="true"]');
+            if (editor) handleDirectTextEdit(editor);
+        });
+        window.addEventListener('pagehide', () => { runAutoSave(); });
+        document.addEventListener('visibilitychange', () => { if (document.hidden) runAutoSave(); });
+
+        function updateOverflowStatus() {
+            const status = document.getElementById('overflow-status');
+            const container = document.getElementById('scene-container');
+            if (!status || !container) return;
+            const dual = document.getElementById('dual-page-toggle').checked;
+            let verticalOverflow = false, horizontalOverflow = false, detail = '';
+            if (dual) {
+                const left = document.getElementById('scene-col-left');
+                const right = document.getElementById('scene-col-right');
+                verticalOverflow = !!((left && left.scrollHeight > currentTargetHeight + 1) || (right && right.scrollHeight > currentTargetHeight + 1));
+                horizontalOverflow = !!((left && left.scrollWidth > left.clientWidth + 1) || (right && right.scrollWidth > right.clientWidth + 1));
+                if (verticalOverflow) detail = '2쪽 영역을 넘쳤습니다. 글자 크기나 간격을 줄여 주세요.';
+            } else {
+                verticalOverflow = container.scrollHeight > container.clientHeight + 1;
+                horizontalOverflow = container.scrollWidth > container.clientWidth + 1;
+            }
+            status.classList.remove('warn','caution');
+            if (verticalOverflow || horizontalOverflow) {
+                status.classList.add('warn');
+                const axes = [verticalOverflow ? '세로' : '', horizontalOverflow ? '가로' : ''].filter(Boolean).join('·');
+                status.textContent = `⚠️ 화면 초과 감지: ${axes} 영역이 잘릴 수 있습니다. ${detail}`.trim();
+            } else if (parsedBlocks.length === 0) {
+                status.classList.add('caution');
+                status.textContent = 'ℹ️ 대본을 불러오면 화면 초과 여부를 자동으로 확인합니다.';
+            } else {
+                status.textContent = '✅ 현재 내용이 화면 안에 들어옵니다.';
+            }
+        }
+
+        function fitSceneToContent(force = false) {
+            const enabled = document.getElementById('auto-fit-scene');
+            if (!force && !enabled.checked) return;
+            flushDirectEdits();
+            // The fit result is stored as actual settings. It does not depend on the import switch.
+            document.getElementById('layout-top-auto').checked = false;
+            document.getElementById('layout-left-auto').checked = false;
+            const put = (id, value) => { document.getElementById(id).value = Math.round(value * 10) / 10; };
+            const width = currentTargetWidth, height = currentTargetHeight;
+            const base = Math.min(width / 1920, height / 1080);
+            const margin = Math.max(8, Math.min(width, height) * .025);
+            const requestedDual = document.getElementById('dual-page-toggle').checked;
+            // Prefer one page with comfortably sized text; use two pages for longer scripts.
+            const modes = requestedDual ? [true] : [false, true];
+            for (const dual of modes) {
+                document.getElementById('dual-page-toggle').checked = dual;
+                const pageWidth = dual ? (width - 2) / 2 : width;
+                const reference = Math.min(base, pageWidth / (dual ? 960 : 1920));
+                const minScale = dual ? .35 : .92;
+                for (let scale = 2.4; scale >= minScale - .001; scale -= .02) {
+                    const unit = Math.max(.12, reference * scale);
+                    const font = Math.max(12, 28 * unit);
+                    const thumb = Math.max(28, 96 * unit);
+                    const inset = Math.max(6, 16 * unit);
+                    put('layout-left', margin); put('layout-top', margin);
+                    put('layout-gap', Math.max(4, 12 * unit));
+                    put('thumb-size', thumb);
+                    put('size-name', Math.max(11, 22 * unit)); put('size-speech', font); put('size-narr', Math.max(12, 25 * unit));
+                    put('name-x', thumb + inset); put('name-y', 0);
+                    put('speech-x', thumb + inset); put('speech-y', Math.max(11,22*unit) * 1.4 + Math.max(4,5*unit)*2 + 6);
+                    put('narr-x', 0);
+                    put('pad-name-x', Math.max(4,8*unit));put('pad-name-y',Math.max(4,5*unit));
+                    put('pad-speech-x', Math.max(6,16*unit));put('pad-speech-y',Math.max(5,10*unit));
+                    put('pad-narr-x',Math.max(6,16*unit));put('pad-narr-y',Math.max(5,10*unit));
+                    put('speech-margin-bottom',0);put('narr-margin-top',0);put('narr-margin-bottom',0);
+                    put('line-height-range',1.4);put('line-height-num',1.4);put('letter-spacing-num',0);
+                    put('speech-max-w',Math.max(40,pageWidth-margin*2-thumb-inset));
+                    put('narr-max-w',Math.max(40,pageWidth-margin*2));
+                    document.getElementById('auto-dialogue-spacing').checked = true;
+                    const bounds = measureContentBounds(__measureCtx);
+                    if (bounds.maxColHeight <= height - margin*2 && bounds.maxRightExtent <= pageWidth - margin*2 + 1) {
+                        put('layout-top', Math.max(margin,(height-bounds.maxColHeight)/2));
+                        return;
+                    }
+                }
+            }
+            // Keep content intact; the existing overflow indicator reports oversized scripts.
+            put('layout-top', margin);
+        }
+
+        function fitPageBoxWidth(requested, available, offset, dual) {
+            // Width constraints belong to the scene, not the future-import preference.
+            return Math.max(1, Math.min(requested, available - Math.max(0, offset)));
+        }
+
+        function dialogueContentHeight(boxHeight) {
+            const value = id => parseFloat(document.getElementById(id).value) || 0;
+            const thumb = value('thumb-size');
+            if (!document.getElementById('auto-dialogue-spacing').checked) return thumb;
+            const speechY = value('speech-y');
+            const nameY = value('name-y');
+            const nameBottom = nameY + value('size-name') * 1.4 + value('pad-name-y') * 2;
+            const nextTop = Math.min(0, speechY, nameY);
+            const negativeGap = Math.min(0, value('speech-margin-bottom')) + Math.min(0, value('layout-gap'));
+            return Math.max(thumb, speechY + boxHeight, nameBottom) - nextTop - negativeGap + 8;
+        }
+
+        function updateDialogueRowSpacing(row) {
+            const box = row.querySelector('.component-box');
+            if (box) row.style.minHeight = dialogueContentHeight(box.offsetHeight) + 'px';
+        }
+
+        function updateDualPageFlow() {
+            const right = document.getElementById('scene-col-right');
+            const left = document.getElementById('scene-col-left');
+            if (!right || !left) return;
+            // Preserve script order even after an edit changes which page a row fits on.
+            const rows = new Map(Array.from(document.querySelectorAll('#scene-container .scene-row')).map(row => [row.querySelector('.component-speech').dataset.blockId, row]));
+            const focused = document.activeElement;
+            const selection = window.getSelection();
+            const caret = focused && focused.closest('.component-speech') && selection.rangeCount ? { anchor: selection.anchorNode, anchorOffset: selection.anchorOffset, focus: selection.focusNode, focusOffset: selection.focusOffset } : null;
+            // Detach whole rows rather than replacing their text nodes.
+            rows.forEach(row => row.remove());
+            let column = left;
+            for (const block of parsedBlocks) {
+                const row = rows.get(block.id);
+                if (!row) continue;
+                column.appendChild(row);
+                updateDialogueRowSpacing(row);
+                const bottom = row.getBoundingClientRect().bottom;
+                if (column === left && left.children.length > 1 && bottom > left.getBoundingClientRect().bottom + 1) {
+                    right.appendChild(row);
+                    column = right;
+                }
+            }
+            if (caret && focused.isConnected) {
+                focused.focus({ preventScroll: true });
+                selection.setBaseAndExtent(caret.anchor, caret.anchorOffset, caret.focus, caret.focusOffset);
+            }
+        }
+
+        function renderSceneDOM() {
+            const container = document.getElementById('scene-container');
+            container.innerHTML = '';
+
+            if (bgAssetId && appAssets.has(bgAssetId)) {
+                container.style.backgroundImage = `url('${appAssets.get(bgAssetId).url}')`;
+            } else {
+                container.style.backgroundImage = 'none';
+            }
+
+            let selectedFont = document.getElementById('font-select').value;
+            if (selectedFont === 'custom') selectedFont = document.getElementById('font-custom-input').value;
+            container.style.fontFamily = selectedFont;
+
+            computeAndApplyAutoLayout(__measureCtx);
+
+            const layoutTopVal = document.getElementById('layout-top').value + 'px';
+            const layoutLeftVal = document.getElementById('layout-left').value + 'px';
+            const layoutGapVal = document.getElementById('layout-gap').value + 'px';
+
+            const tSize = document.getElementById('thumb-size').value + 'px';
+            const bName = document.getElementById('bold-name').checked ? 'bold' : 'normal';
+            const bSpeech = document.getElementById('bold-speech').checked ? 'bold' : 'normal';
+            const bNarr = document.getElementById('bold-narr').checked ? 'bold' : 'normal';
+
+            const nSize = document.getElementById('size-name').value + 'px';
+            const nX = document.getElementById('name-x').value + 'px';
+            const nY = document.getElementById('name-y').value + 'px';
+            const nColor = document.getElementById('color-name').value;
+            const nameBg = hexToRgba(document.getElementById('name-bg-color').value, document.getElementById('name-bg-opacity').value);
+            const padNameX = document.getElementById('pad-name-x').value + 'px';
+            const padNameY = document.getElementById('pad-name-y').value + 'px';
+
+            const sSize = document.getElementById('size-speech').value + 'px';
+            const sX = document.getElementById('speech-x').value + 'px';
+            const sY = document.getElementById('speech-y').value + 'px';
+            const sMaxWNum = parseFloat(document.getElementById('speech-max-w').value);
+            const sColor = document.getElementById('color-speech').value;
+            const bgOpacityVal = document.getElementById('bg-opacity').value;
+            const dialogueBg = hexToRgba(document.getElementById('bg-color').value, bgOpacityVal);
+            const padSpeechX = document.getElementById('pad-speech-x').value + 'px';
+            const padSpeechY = document.getElementById('pad-speech-y').value + 'px';
+            const speechMb = document.getElementById('speech-margin-bottom').value + 'px';
+
+            const nrgSize = document.getElementById('size-narr').value + 'px';
+            const nrgX = document.getElementById('narr-x').value + 'px';
+            const nrgMaxWNum = parseFloat(document.getElementById('narr-max-w').value);
+            const nrgColor = document.getElementById('color-narr').value;
+            const narrBg = hexToRgba(document.getElementById('narr-bg-color').value, document.getElementById('narr-bg-opacity').value);
+            const padNarrX = document.getElementById('pad-narr-x').value + 'px';
+            const padNarrY = document.getElementById('pad-narr-y').value + 'px';
+            const narrMt = document.getElementById('narr-margin-top').value + 'px';
+            const narrMb = document.getElementById('narr-margin-bottom').value + 'px';
+
+            const lineHeightVal = document.getElementById('line-height-range').value;
+            const letterSpacingVal = document.getElementById('letter-spacing-num').value + 'px';
+            const boxRoundedOn = document.getElementById('box-rounded-toggle').checked;
+            const boxBorderRadius = boxRoundedOn ? '6px' : '0px';
+
+            const { thumbMap: charThumbMap, styleMap: charStyleMap } = buildCharacterMaps();
+
+            const dualPageOn = document.getElementById('dual-page-toggle').checked;
+            const dividerStyleVal = document.getElementById('divider-style').value;
+
+            container.style.display = 'flex';
+            let activeCol = container;
+            let leftCol = null, rightCol = null;
+
+            if (dualPageOn) {
+                container.style.flexDirection = 'row';
+                container.style.padding = '0';
+                container.style.gap = '0';
+
+                const colStyle = `box-sizing:border-box; height:100%; display:flex; flex-direction:column; overflow:hidden; padding-top:${layoutTopVal}; padding-left:${layoutLeftVal}; padding-right:${layoutLeftVal}; gap:${layoutGapVal}; width:calc(50% - 1px); flex-shrink:0;`;
+
+                leftCol = document.createElement('div');
+                leftCol.id = 'scene-col-left';
+                leftCol.style.cssText = colStyle;
+
+                const divider = document.createElement('div');
+                divider.id = 'scene-col-divider';
+                divider.style.cssText = `width:2px; height:100%; flex-shrink:0; background:${dividerStyleVal === 'line' ? 'rgba(255,255,255,0.5)' : 'transparent'};`;
+
+                rightCol = document.createElement('div');
+                rightCol.id = 'scene-col-right';
+                rightCol.style.cssText = colStyle;
+
+                container.appendChild(leftCol);
+                container.appendChild(divider);
+                container.appendChild(rightCol);
+                activeCol = leftCol;
+            } else {
+                container.style.flexDirection = 'column';
+                container.style.padding = `${layoutTopVal} ${layoutLeftVal}`;
+                container.style.gap = layoutGapVal;
+            }
+
+            const colUsableWidth = (dualPageOn ? (currentTargetWidth - 2) / 2 : currentTargetWidth) - parseFloat(layoutLeftVal) * 2;
+            const sMaxW = fitPageBoxWidth(sMaxWNum, colUsableWidth, parseFloat(sX), dualPageOn) + 'px';
+            const nrgMaxW = fitPageBoxWidth(nrgMaxWNum, colUsableWidth, parseFloat(nrgX), dualPageOn) + 'px';
+
+            parsedBlocks.forEach(block => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'scene-row';
+
+                const ast = parseBBCodeToAST(block.text);
+                const htmlContent = renderASTToHtml(ast);
+
+                const isEditable = (currentControlMode === 'normal') ? 'contenteditable="true"' : '';
+
+                if (block.type === 'dialogue') {
+                    const fullCharKey = block.fullCharKey;
+                    const displayName = fullCharKey.includes(':') ? fullCharKey.split(':')[0].trim() : fullCharKey;
+                    const override = charStyleMap[fullCharKey] || charStyleMap[displayName];
+                    const effNColor = (override && override.nameColor) || nColor;
+                    const effSColor = (override && override.textColor) || sColor;
+                    const effDialogueBg = (override && override.boxColor) ? hexToRgba(override.boxColor, bgOpacityVal) : dialogueBg;
+
+                    let imgTag = '';
+                    if (charThumbMap[fullCharKey]) {
+                        imgTag = `<img src="${charThumbMap[fullCharKey]}" alt="${escapeHtml(displayName)}">`;
+                    } else if (charThumbMap[displayName]) {
+                        imgTag = `<img src="${charThumbMap[displayName]}" alt="${escapeHtml(displayName)}">`;
+                    }
+
+                    rowDiv.style.marginBottom = speechMb;
+                    rowDiv.style.minHeight = tSize;
+                    rowDiv.innerHTML = `
+                        <div class="component-thumb" style="width: ${tSize}; height: ${tSize};">
+                            ${imgTag}
+                        </div>
+                        <div class="component-name" style="font-size: ${nSize}; color: ${effNColor}; font-weight: ${bName}; background-color: ${nameBg}; padding: ${padNameY} ${padNameX}; left: ${nX}; top: ${nY}; border-radius: ${boxRoundedOn ? '4px' : '0px'}; flex-direction: column; justify-content: center; display: inline-flex;">
+                            ${escapeHtml(displayName)}
+                        </div>
+                        <div class="component-box" style="background-color: ${effDialogueBg}; padding: ${padSpeechY} ${padSpeechX}; left: ${sX}; top: ${sY}; max-width: ${sMaxW}; border-radius: ${boxBorderRadius};">
+                            <div class="component-speech" data-block-id="${block.id}" ${isEditable} onblur="handleDirectTextEdit(this)" style="font-size: ${sSize}; color: ${effSColor}; font-weight: ${bSpeech}; line-height: ${lineHeightVal}; letter-spacing: ${letterSpacingVal};">${htmlContent}</div>
+                        </div>
+                    `;
+                } else {
+                    rowDiv.style.marginTop = narrMt;
+                    rowDiv.style.marginBottom = narrMb;
+                    rowDiv.innerHTML = `
+                        <div class="component-narr-box" style="background-color: ${narrBg}; padding: ${padNarrY} ${padNarrX}; margin-left: ${nrgX}; max-width: ${nrgMaxW}; border-radius: ${boxBorderRadius};">
+                            <div class="component-speech" data-block-id="${block.id}" ${isEditable} onblur="handleDirectTextEdit(this)" style="font-size: ${nrgSize}; color: ${nrgColor}; font-weight: ${bNarr}; line-height: ${lineHeightVal}; letter-spacing: ${letterSpacingVal};">${htmlContent}</div>
+                        </div>
+                    `;
+                }
+
+                rowDiv.querySelectorAll('.component-speech').forEach(editor => {
+                    editor._serializedText = readEditableBBCode(editor);
+                });
+                activeCol.appendChild(rowDiv);
+                updateDialogueRowSpacing(rowDiv);
+
+
+            });
+            if (dualPageOn) updateDualPageFlow();
+            requestAnimationFrame(() => {
+                document.querySelectorAll('#scene-container .scene-row').forEach(updateDialogueRowSpacing);
+                if (dualPageOn) updateDualPageFlow();
+                updateOverflowStatus();
+            });
+        }
+
+        // --- 7. 서식 인라인 편집 모드 ---
+        let currentActiveBlockId = null;
+        let savedSelectionOffsets = null;
+
+        function switchControlMode(mode) {
+            flushDirectEdits();
+            captureDeltaStart();
+            currentControlMode = mode;
+            recordHistory();
+
+            document.getElementById("mode-normal").classList.toggle("active", mode === "normal");
+            document.getElementById("mode-format").classList.toggle("active", mode === "format");
+
+            renderSceneDOM();
+
+            window.getSelection().removeAllRanges();
+            document.getElementById("text-format-tooltip").style.display = "none";
+            document.getElementById("custom-color-picker-modal").style.display = "none";
+        }
+
+        function getCharOffsetWithin(element) {
+            let start = 0, end = 0;
+            let sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+                let range = sel.getRangeAt(0);
+                let preCaretRange = range.cloneRange();
+                preCaretRange.selectNodeContents(element);
+                preCaretRange.setEnd(range.startContainer, range.startOffset);
+                start = preCaretRange.toString().length;
+                end = start + range.toString().length;
+            }
+            return { start, end };
+        }
+
+        document.addEventListener("mouseup", function(e) {
+            if (currentControlMode !== "format") return;
+
+            const tooltip = document.getElementById("text-format-tooltip");
+            const colorModal = document.getElementById("custom-color-picker-modal");
+
+            if (e.target.closest("#text-format-tooltip") || e.target.closest("#custom-color-picker-modal")) return;
+
+            const sel = window.getSelection();
+            if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+                tooltip.style.display = "none";
+                colorModal.style.display = "none";
+                currentActiveBlockId = null;
+                savedSelectionOffsets = null;
+                return;
+            }
+
+            const range = sel.getRangeAt(0);
+            let node = range.commonAncestorContainer;
+            if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+            const textContainer = node ? node.closest(".component-speech") : null;
+
+            if (!textContainer) {
+                tooltip.style.display = "none";
+                colorModal.style.display = "none";
+                return;
+            }
+
+            const blockId = textContainer.dataset.blockId;
+            const offsets = getCharOffsetWithin(textContainer);
+            if (offsets.start === offsets.end) {
+                tooltip.style.display = "none";
+                return;
+            }
+
+            currentActiveBlockId = blockId;
+            savedSelectionOffsets = offsets;
+
+            const wrapperEl = document.getElementById("preview-wrapper-zone");
+            const wrapperRect = wrapperEl.getBoundingClientRect();
+            const selRect = range.getBoundingClientRect();
+
+            tooltip.style.display = "flex";
+            let top = selRect.top - wrapperRect.top - tooltip.offsetHeight - 10;
+            if (top < 0) top = selRect.bottom - wrapperRect.top + 10;
+            let left = selRect.left - wrapperRect.left;
+            left = Math.max(0, Math.min(left, wrapperRect.width - tooltip.offsetWidth));
+
+            tooltip.style.top = top + "px";
+            tooltip.style.left = left + "px";
+        });
+
+        function formatSelectionWithAST(modifierCallback) {
+            if (!currentActiveBlockId || !savedSelectionOffsets) return;
+            const block = parsedBlocks.find(b => b.id === currentActiveBlockId);
+            if (!block) return;
+
+            const offsets = savedSelectionOffsets;
+            if (offsets.start === offsets.end) return;
+
+            captureDeltaStart();
+
+            const ast = parseBBCodeToAST(block.text);
+            const tokens = flattenASTToTokens(ast);
+
+            for (let k = offsets.start; k < offsets.end; k++) {
+                if (tokens[k]) modifierCallback(tokens[k]);
+            }
+
+            block.text = reconstructBBCodeFromTokens(tokens);
+            recordHistory();
+            renderSceneDOM();
+
+            window.getSelection().removeAllRanges();
+            document.getElementById("text-format-tooltip").style.display = "none";
+            document.getElementById("custom-color-picker-modal").style.display = "none";
+            savedSelectionOffsets = null;
+        }
+
+        function applyFormat(tag) {
+            formatSelectionWithAST(token => {
+                if (tag === "[b]") token.b = !token.b;
+                if (tag === "[i]") token.i = !token.i;
+                if (tag === "[u]") token.u = !token.u;
+                if (tag === "[s]") token.s = !token.s;
+            });
+        }
+
+        function applyPresetColor(hexValue) {
+            formatSelectionWithAST(token => { token.color = hexValue; });
+        }
+
+        function applyCustomColorInput() {
+            let color = document.getElementById("custom-hex-input").value.trim();
+            if (color) {
+                if (!color.startsWith('#')) color = '#' + color;
+                if (!isValidHexColor(color)) {
+                    alert("올바른 HEX 색상 코드가 아닙니다. 예: #ff5555");
+                    return;
+                }
+                formatSelectionWithAST(token => { token.color = color; });
+            }
+        }
+
+        function toggleColorPickerModal(e) {
+            e.stopPropagation();
+            const modal = document.getElementById("custom-color-picker-modal");
+            const tooltip = document.getElementById("text-format-tooltip");
+            if (modal.style.display === "flex") {
+                modal.style.display = "none";
+                return;
+            }
+            modal.style.left = tooltip.style.left;
+            modal.style.top = (parseFloat(tooltip.style.top) + 40) + "px";
+            modal.style.display = "flex";
+        }
+
+        function promptSizeFormat() {
+            let size = prompt("설정할 글자 크기를 수치로 입력하세요 (px)", "28");
+            if (size && !isNaN(size)) {
+                const safeSize = sanitizeSizeValue(size);
+                if (safeSize !== null) formatSelectionWithAST(token => { token.size = safeSize; });
+            }
+        }
+
+        function clearSelectedTags() {
+            formatSelectionWithAST(token => {
+                token.b = false; token.i = false; token.u = false; token.s = false;
+                token.color = null; token.size = null;
+            });
+        }
+
+        // --- 7.5 자동 중앙 정렬(상단/좌측 시작) 계산 ---
+        // parsedBlocks 전체를 실제 렌더링과 동일한 규칙으로 훑어서
+        // (1) 세로 전체 높이(듀얼페이지면 컬럼별 최대 높이), (2) 가로 최대 도달 폭을 측정한다.
+        function measureContentBounds(ctx) {
+            let fontFamRaw = document.getElementById('font-select').value;
+            if (fontFamRaw === 'custom') fontFamRaw = document.getElementById('font-custom-input').value;
+            const fontFam = fontFamRaw.replace(/['"]/g, '').trim();
+
+            const layoutGap = parseFloat(document.getElementById('layout-gap').value) || 0;
+            const layoutLeftRef = parseFloat(document.getElementById('layout-left').value) || 0;
+
+            const tSize = parseFloat(document.getElementById('thumb-size').value) || 0;
+            const bName = document.getElementById('bold-name').checked ? 'bold' : 'normal';
+            const nSize = parseFloat(document.getElementById('size-name').value) || 0;
+            const nX = parseFloat(document.getElementById('name-x').value) || 0;
+            const padNameX = parseFloat(document.getElementById('pad-name-x').value) || 0;
+
+            const bSpeech = document.getElementById('bold-speech').checked ? 'bold' : 'normal';
+            const sSize = parseFloat(document.getElementById('size-speech').value) || 0;
+            const sX = parseFloat(document.getElementById('speech-x').value) || 0;
+            const sY = parseFloat(document.getElementById('speech-y').value) || 0;
+            const sMaxWBase = parseFloat(document.getElementById('speech-max-w').value) || 0;
+            const padSpeechX = parseFloat(document.getElementById('pad-speech-x').value) || 0;
+            const padSpeechY = parseFloat(document.getElementById('pad-speech-y').value) || 0;
+            const speechMb = parseFloat(document.getElementById('speech-margin-bottom').value) || 0;
+
+            const bNarr = document.getElementById('bold-narr').checked ? 'bold' : 'normal';
+            const nrgSize = parseFloat(document.getElementById('size-narr').value) || 0;
+            const nrgX = parseFloat(document.getElementById('narr-x').value) || 0;
+            const nrgMaxWBase = parseFloat(document.getElementById('narr-max-w').value) || 0;
+            const padNarrX = parseFloat(document.getElementById('pad-narr-x').value) || 0;
+            const padNarrY = parseFloat(document.getElementById('pad-narr-y').value) || 0;
+            const narrMt = parseFloat(document.getElementById('narr-margin-top').value) || 0;
+            const narrMb = parseFloat(document.getElementById('narr-margin-bottom').value) || 0;
+
+            const lineHeightMult = parseFloat(document.getElementById('line-height-range').value) || 1;
+            const letterSpacingPx = parseFloat(document.getElementById('letter-spacing-num').value) || 0;
+
+            const dualPageOn = document.getElementById('dual-page-toggle').checked;
+            const columnGutter = dualPageOn ? 2 : 0;
+            const columnWidth = dualPageOn ? (currentTargetWidth - columnGutter) / 2 : currentTargetWidth;
+            const colUsableWidth = Math.max(1, columnWidth - layoutLeftRef * 2);
+            const sMaxW = fitPageBoxWidth(sMaxWBase, colUsableWidth, sX, dualPageOn);
+            const nrgMaxW = fitPageBoxWidth(nrgMaxWBase, colUsableWidth, nrgX, dualPageOn);
+
+            const colHeights = [0];
+            let colIdx = 0;
+            let currentY = 0;
+            let maxRightExtent = 0;
+
+            parsedBlocks.forEach(block => {
+                if (block.type === 'dialogue') {
+                    const fullCharKey = block.fullCharKey;
+                    const displayName = fullCharKey.includes(':') ? fullCharKey.split(':')[0].trim() : fullCharKey;
+
+                    const ast = parseBBCodeToAST(block.text);
+                    const tokens = flattenASTToTokens(ast);
+                    const speechLines = wrapTextTokens(ctx, tokens, sMaxW - padSpeechX * 2, sSize, fontFam, bSpeech, letterSpacingPx);
+
+                    const lineStep = sSize * lineHeightMult;
+                    const textContentHeight = speechLines.length > 0 ? (sSize + (speechLines.length - 1) * lineStep) : 0;
+                    const boxH = textContentHeight + padSpeechY * 2;
+                    const rowHeight = dialogueContentHeight(boxH) + speechMb + layoutGap;
+
+                    if (dualPageOn && colIdx === 0 && (currentY + rowHeight) > currentTargetHeight) {
+                        colHeights[colIdx] = currentY;
+                        colIdx = 1;
+                        colHeights[colIdx] = 0;
+                        currentY = 0;
+                    }
+
+                    ctx.font = `${bName} ${nSize}px ${fontFam}`;
+                    const nameWidth = getTokensLineWidth(ctx, [{ char: displayName }], nSize, fontFam, bName, letterSpacingPx);
+                    const nameBoxW = nameWidth + padNameX * 2;
+                    const nameRight = nX + nameBoxW;
+
+                    const speechBoxW = Math.min(sMaxW, getLinesMaxWidth(ctx, speechLines, sSize, fontFam, bSpeech, letterSpacingPx) + padSpeechX * 2);
+                    const speechRight = sX + speechBoxW;
+
+                    const rowRightExtent = Math.max(tSize, nameRight, speechRight);
+                    if (rowRightExtent > maxRightExtent) maxRightExtent = rowRightExtent;
+
+                    currentY += rowHeight;
+                } else {
+                    currentY += narrMt;
+
+                    const ast = parseBBCodeToAST(block.text);
+                    const tokens = flattenASTToTokens(ast);
+                    const narrLines = wrapTextTokens(ctx, tokens, nrgMaxW - padNarrX * 2, nrgSize, fontFam, bNarr, letterSpacingPx);
+
+                    const lineStep = nrgSize * lineHeightMult;
+                    const textContentHeight = narrLines.length > 0 ? (nrgSize + (narrLines.length - 1) * lineStep) : 0;
+                    const boxH = textContentHeight + padNarrY * 2;
+                    const rowHeight = boxH + narrMb + layoutGap;
+
+                    if (dualPageOn && colIdx === 0 && (currentY + rowHeight) > currentTargetHeight) {
+                        colHeights[colIdx] = currentY;
+                        colIdx = 1;
+                        colHeights[colIdx] = 0;
+                        currentY = 0;
+                    }
+
+                    const narrBoxW = Math.min(nrgMaxW, getLinesMaxWidth(ctx, narrLines, nrgSize, fontFam, bNarr, letterSpacingPx) + padNarrX * 2);
+                    const narrRight = nrgX + narrBoxW;
+                    if (narrRight > maxRightExtent) maxRightExtent = narrRight;
+
+                    currentY += rowHeight;
+                }
+            });
+            colHeights[colIdx] = currentY;
+
+            const maxColHeight = Math.max(...colHeights, 0);
+            return { maxColHeight, maxRightExtent, columnWidth };
+        }
+
+        // 체크박스 상태를 읽어 상단시작(Y)/좌측시작(X) 입력값을 자동 계산해 채워 넣고,
+        // 자동 모드인 입력창은 수동 수정이 불가하도록 잠근다.
+        function computeAndApplyAutoLayout(ctx) {
+            const topAutoEl = document.getElementById('layout-top-auto');
+            const leftAutoEl = document.getElementById('layout-left-auto');
+            const topInput = document.getElementById('layout-top');
+            const leftInput = document.getElementById('layout-left');
+            if (!topAutoEl || !leftAutoEl || !topInput || !leftInput) return;
+
+            const topAutoOn = topAutoEl.checked;
+            const leftAutoOn = leftAutoEl.checked;
+
+            topInput.disabled = topAutoOn;
+            leftInput.disabled = leftAutoOn;
+            topInput.style.opacity = topAutoOn ? '0.5' : '1';
+            leftInput.style.opacity = leftAutoOn ? '0.5' : '1';
+
+            if ((!topAutoOn && !leftAutoOn) || parsedBlocks.length === 0) return;
+
+            const bounds = measureContentBounds(ctx);
+
+            if (topAutoOn) {
+                const autoTop = Math.max(0, Math.round((currentTargetHeight - bounds.maxColHeight) / 2));
+                topInput.value = autoTop;
+            }
+            if (leftAutoOn) {
+                const autoLeft = Math.max(0, Math.round((bounds.columnWidth - bounds.maxRightExtent) / 2));
+                leftInput.value = autoLeft;
+            }
+        }
+
+        // --- 8. HTML5 Canvas 고해상도 렌더링 & 내보내기 ---
+        async function downloadSceneCanvas() {
+            flushDirectEdits();
+            if (parsedBlocks.length === 0) {
+                alert("장면을 먼저 빌드해 주세요.");
+                return;
+            }
+
+            try {
+                await document.fonts.ready;
+            } catch (e) {
+                console.warn("Font loading wait failed", e);
+            }
+
+            updateOverflowStatus();
+            const overflowEl = document.getElementById('overflow-status');
+            if (overflowEl && overflowEl.classList.contains('warn')) {
+                const proceed = confirm('현재 장면이 화면 영역을 초과해 일부가 잘릴 수 있습니다. 그래도 PNG를 저장할까요?');
+                if (!proceed) return;
+            }
+
+            const canvas = document.createElement("canvas");
+            canvas.width = currentTargetWidth;
+            canvas.height = currentTargetHeight;
+            const ctx = canvas.getContext("2d");
+
+            // 1. 배경 그리기
+            let bgDrawn = false;
+            if (bgAssetId && appAssets.has(bgAssetId)) {
+                const bgImg = await loadImageElement(appAssets.get(bgAssetId).url);
+                if (bgImg) {
+                    ctx.drawImage(bgImg, 0, 0, currentTargetWidth, currentTargetHeight);
+                    bgDrawn = true;
+                }
+            }
+            if (!bgDrawn) {
+                ctx.fillStyle = "#222222";
+                ctx.fillRect(0, 0, currentTargetWidth, currentTargetHeight);
+            }
+
+            // 2. 설정 수치 획득
+            computeAndApplyAutoLayout(ctx);
+            const layoutTop = parseFloat(document.getElementById('layout-top').value);
+            const layoutLeft = parseFloat(document.getElementById('layout-left').value);
+            const layoutGap = parseFloat(document.getElementById('layout-gap').value);
+
+            let fontFamRaw = document.getElementById('font-select').value;
+            if (fontFamRaw === 'custom') fontFamRaw = document.getElementById('font-custom-input').value;
+            const fontFam = fontFamRaw.replace(/['"]/g, '').trim();
+
+            const tSize = parseFloat(document.getElementById('thumb-size').value);
+            const bName = document.getElementById('bold-name').checked ? 'bold' : 'normal';
+            const nSize = parseFloat(document.getElementById('size-name').value);
+            const nX = parseFloat(document.getElementById('name-x').value);
+            const nY = parseFloat(document.getElementById('name-y').value);
+            const nColor = document.getElementById('color-name').value;
+            const nameBg = hexToRgba(document.getElementById('name-bg-color').value, document.getElementById('name-bg-opacity').value);
+            const padNameX = parseFloat(document.getElementById('pad-name-x').value);
+            const padNameY = parseFloat(document.getElementById('pad-name-y').value);
+
+            const bSpeech = document.getElementById('bold-speech').checked ? 'bold' : 'normal';
+            const sSize = parseFloat(document.getElementById('size-speech').value);
+            const sX = parseFloat(document.getElementById('speech-x').value);
+            const sY = parseFloat(document.getElementById('speech-y').value);
+            const sMaxWBase = parseFloat(document.getElementById('speech-max-w').value);
+            const sColor = document.getElementById('color-speech').value;
+            const bgOpacityVal = document.getElementById('bg-opacity').value;
+            const dialogueBg = hexToRgba(document.getElementById('bg-color').value, bgOpacityVal);
+            const padSpeechX = parseFloat(document.getElementById('pad-speech-x').value);
+            const padSpeechY = parseFloat(document.getElementById('pad-speech-y').value);
+            const speechMb = parseFloat(document.getElementById('speech-margin-bottom').value);
+
+            const bNarr = document.getElementById('bold-narr').checked ? 'bold' : 'normal';
+            const nrgSize = parseFloat(document.getElementById('size-narr').value);
+            const nrgX = parseFloat(document.getElementById('narr-x').value);
+            const nrgMaxWBase = parseFloat(document.getElementById('narr-max-w').value);
+            const nrgColor = document.getElementById('color-narr').value;
+            const narrBg = hexToRgba(document.getElementById('narr-bg-color').value, document.getElementById('narr-bg-opacity').value);
+            const padNarrX = parseFloat(document.getElementById('pad-narr-x').value);
+            const padNarrY = parseFloat(document.getElementById('pad-narr-y').value);
+            const narrMt = parseFloat(document.getElementById('narr-margin-top').value);
+            const narrMb = parseFloat(document.getElementById('narr-margin-bottom').value);
+
+            const lineHeightMult = parseFloat(document.getElementById('line-height-range').value);
+            const letterSpacingPx = parseFloat(document.getElementById('letter-spacing-num').value);
+            const boxRoundedOn = document.getElementById('box-rounded-toggle').checked;
+
+            const masterOverrideOn = document.getElementById('enable-char-style-override').checked;
+            const charRowsData = getCharRowsData();
+            const charThumbMap = {};
+            const charStyleMap = {};
+            for (const c of charRowsData) {
+                if (c.assetId && appAssets.has(c.assetId)) {
+                    charThumbMap[c.name] = await loadImageElement(appAssets.get(c.assetId).url);
+                }
+                if (masterOverrideOn && c.overrideEnabled) {
+                    charStyleMap[c.name] = { nameColor: c.overrideNameColor, textColor: c.overrideTextColor, boxColor: c.overrideBoxColor };
+                }
+            }
+
+            const dualPageOn = document.getElementById('dual-page-toggle').checked;
+            const dividerStyleVal = document.getElementById('divider-style').value;
+            const columnGutter = dualPageOn ? 2 : 0;
+            const columnWidth = dualPageOn ? (currentTargetWidth - columnGutter) / 2 : currentTargetWidth;
+            const colUsableWidth = Math.max(1, columnWidth - layoutLeft * 2);
+            const sMaxW = fitPageBoxWidth(sMaxWBase, colUsableWidth, sX, dualPageOn);
+            const nrgMaxW = fitPageBoxWidth(nrgMaxWBase, colUsableWidth, nrgX, dualPageOn);
+
+            let currentY = layoutTop;
+            let columnOffsetX = 0;
+            let firstPage = true;
+
+            for (const block of parsedBlocks) {
+                if (block.type === 'dialogue') {
+                    const fullCharKey = block.fullCharKey;
+                    const displayName = fullCharKey.includes(':') ? fullCharKey.split(':')[0].trim() : fullCharKey;
+                    const thumbImg = charThumbMap[fullCharKey] || charThumbMap[displayName] || null;
+                    const override = charStyleMap[fullCharKey] || charStyleMap[displayName];
+                    const effNColor = (override && override.nameColor) || nColor;
+                    const effSColor = (override && override.textColor) || sColor;
+                    const effDialogueBg = (override && override.boxColor) ? hexToRgba(override.boxColor, bgOpacityVal) : dialogueBg;
+
+                    const ast = parseBBCodeToAST(block.text);
+                    const tokens = flattenASTToTokens(ast);
+                    const speechLines = wrapTextTokens(ctx, tokens, sMaxW - padSpeechX * 2, sSize, fontFam, bSpeech, letterSpacingPx);
+                    
+                    const lineStep = sSize * lineHeightMult;
+                    const textContentHeight = speechLines.length > 0 ? (sSize + (speechLines.length - 1) * lineStep) : 0;
+                    const boxH = textContentHeight + padSpeechY * 2;
+                    const rowHeight = dialogueContentHeight(boxH) + speechMb + layoutGap;
+
+                    if (dualPageOn && firstPage && currentY > layoutTop && (currentY + rowHeight) > currentTargetHeight) {
+                        columnOffsetX = columnWidth + columnGutter;
+                        firstPage = false;
+                        currentY = layoutTop;
+                    }
+
+                    const xBase = layoutLeft + columnOffsetX;
+
+                    if (thumbImg) {
+                        ctx.drawImage(thumbImg, xBase, currentY, tSize, tSize);
+                    }
+
+                    // 💡 이름 박스 완벽 세로 중앙 정렬 수식 개선
+                    ctx.font = `${bName} ${nSize}px ${fontFam}`;
+                    const nameWidth = getTokensLineWidth(ctx, [{ char: displayName }], nSize, fontFam, bName, letterSpacingPx);
+                    const nameBoxW = nameWidth + padNameX * 2;
+                    const nameBoxH = nSize * 1.4 + padNameY * 2; // 한글 폰트 본래 높이 고려
+                    const namePosX = xBase + nX;
+                    const namePosY = currentY + nY;
+
+                    ctx.fillStyle = nameBg;
+                    if (boxRoundedOn && ctx.roundRect) {
+                        ctx.beginPath();
+                        ctx.roundRect(namePosX, namePosY, nameBoxW, nameBoxH, 4);
+                        ctx.fill();
+                    } else {
+                        ctx.fillRect(namePosX, namePosY, nameBoxW, nameBoxH);
+                    }
+
+                    // 세로 중앙 베이스라인 렌더링
+                    ctx.fillStyle = effNColor;
+                    ctx.textBaseline = "middle";
+                    const nameCenterY = namePosY + (nameBoxH / 2);
+                    renderSingleLineCenteredY(ctx, [{ char: displayName }], namePosX + padNameX, nameCenterY, nSize, fontFam, bName, effNColor, letterSpacingPx);
+
+                    const boxW = Math.min(sMaxW, getLinesMaxWidth(ctx, speechLines, sSize, fontFam, bSpeech, letterSpacingPx) + padSpeechX * 2);
+                    const speechPosX = xBase + sX;
+                    const speechPosY = currentY + sY;
+
+                    ctx.fillStyle = effDialogueBg;
+                    if (boxRoundedOn && ctx.roundRect) {
+                        ctx.beginPath();
+                        ctx.roundRect(speechPosX, speechPosY, boxW, boxH, 6);
+                        ctx.fill();
+                    } else {
+                        ctx.fillRect(speechPosX, speechPosY, boxW, boxH);
+                    }
+
+                    renderFormattedTextLines(ctx, speechLines, speechPosX + padSpeechX, speechPosY + padSpeechY, sSize, fontFam, bSpeech, effSColor, lineHeightMult, letterSpacingPx);
+
+                    currentY += rowHeight;
+                } else {
+                    currentY += narrMt;
+
+                    const ast = parseBBCodeToAST(block.text);
+                    const tokens = flattenASTToTokens(ast);
+                    const narrLines = wrapTextTokens(ctx, tokens, nrgMaxW - padNarrX * 2, nrgSize, fontFam, bNarr, letterSpacingPx);
+                    
+                    const lineStep = nrgSize * lineHeightMult;
+                    const textContentHeight = narrLines.length > 0 ? (nrgSize + (narrLines.length - 1) * lineStep) : 0;
+                    const boxH = textContentHeight + padNarrY * 2;
+                    const rowHeight = boxH + narrMb + layoutGap;
+
+                    if (dualPageOn && firstPage && currentY > layoutTop && (currentY + rowHeight) > currentTargetHeight) {
+                        columnOffsetX = columnWidth + columnGutter;
+                        firstPage = false;
+                        currentY = layoutTop;
+                    }
+
+                    const xBase = layoutLeft + columnOffsetX;
+                    const boxW = Math.min(nrgMaxW, getLinesMaxWidth(ctx, narrLines, nrgSize, fontFam, bNarr, letterSpacingPx) + padNarrX * 2);
+                    const narrPosX = xBase + nrgX;
+
+                    ctx.fillStyle = narrBg;
+                    if (boxRoundedOn && ctx.roundRect) {
+                        ctx.beginPath();
+                        ctx.roundRect(narrPosX, currentY, boxW, boxH, 6);
+                        ctx.fill();
+                    } else {
+                        ctx.fillRect(narrPosX, currentY, boxW, boxH);
+                    }
+
+                    renderFormattedTextLines(ctx, narrLines, narrPosX + padNarrX, currentY + padNarrY, nrgSize, fontFam, bNarr, nrgColor, lineHeightMult, letterSpacingPx);
+
+                    currentY += rowHeight;
+                }
+            }
+
+            if (dualPageOn && dividerStyleVal === 'line') {
+                ctx.save();
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(columnWidth + columnGutter / 2, 0);
+                ctx.lineTo(columnWidth + columnGutter / 2, currentTargetHeight);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            const link = document.createElement('a');
+            link.download = `${scriptFileName}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function loadImageElement(src) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = src;
+            });
+        }
+
+        function wrapTextTokens(ctx, tokens, maxWidth, baseSize, fontFam, defaultWeight, letterSpacing) {
+            let lines = [[]];
+            let currentLineWidth = 0;
+
+            tokens.forEach(tok => {
+                if (tok.char === '\n') {
+                    lines.push([]);
+                    currentLineWidth = 0;
+                    return;
+                }
+
+                const fontSize = tok.size ? tok.size : baseSize;
+                const weight = tok.b ? 'bold' : defaultWeight;
+                const style = tok.i ? 'italic' : 'normal';
+                ctx.font = `${style} ${weight} ${fontSize}px ${fontFam}`;
+                const charW = ctx.measureText(tok.char).width + letterSpacing;
+
+                if (currentLineWidth + charW > maxWidth && lines[lines.length - 1].length > 0) {
+                    lines.push([tok]);
+                    currentLineWidth = charW;
+                } else {
+                    lines[lines.length - 1].push(tok);
+                    currentLineWidth += charW;
+                }
+            });
+            return lines;
+        }
+
+        function getTokensLineWidth(ctx, lineTokens, baseSize, fontFam, defaultWeight, letterSpacing) {
+            let w = 0;
+            lineTokens.forEach(tok => {
+                const fontSize = tok.size ? tok.size : baseSize;
+                const weight = tok.b ? 'bold' : defaultWeight;
+                const style = tok.i ? 'italic' : 'normal';
+                ctx.font = `${style} ${weight} ${fontSize}px ${fontFam}`;
+                w += ctx.measureText(tok.char).width + letterSpacing;
+            });
+            return Math.max(0, w - letterSpacing);
+        }
+
+        function getLinesMaxWidth(ctx, lines, baseSize, fontFam, defaultWeight, letterSpacing) {
+            let maxW = 0;
+            lines.forEach(line => {
+                const w = getTokensLineWidth(ctx, line, baseSize, fontFam, defaultWeight, letterSpacing);
+                if (w > maxW) maxW = w;
+            });
+            return maxW;
+        }
+
+        // 💡 이름 전용 세로 중앙 보정 렌더링
+        function renderSingleLineCenteredY(ctx, tokens, startX, centerY, baseSize, fontFam, defaultWeight, defaultColor, letterSpacing) {
+            let curX = startX;
+            tokens.forEach(tok => {
+                const fontSize = tok.size ? tok.size : baseSize;
+                const weight = tok.b ? 'bold' : defaultWeight;
+                const style = tok.i ? 'italic' : 'normal';
+                ctx.font = `${style} ${weight} ${fontSize}px ${fontFam}`;
+                const rawW = ctx.measureText(tok.char).width;
+
+                ctx.fillStyle = tok.color || defaultColor;
+                ctx.fillText(tok.char, curX, centerY);
+                curX += rawW + letterSpacing;
+            });
+        }
+
+        function renderFormattedTextLines(ctx, lines, startX, startY, baseSize, fontFam, defaultWeight, defaultColor, lineHeightMult, letterSpacing) {
+            ctx.textBaseline = "top";
+            const lineStep = baseSize * lineHeightMult;
+
+            lines.forEach((line, lineIdx) => {
+                let curX = startX;
+                const curY = startY + (lineIdx * lineStep);
+
+                line.forEach(tok => {
+                    const fontSize = tok.size ? tok.size : baseSize;
+                    const weight = tok.b ? 'bold' : defaultWeight;
+                    const style = tok.i ? 'italic' : 'normal';
+                    ctx.font = `${style} ${weight} ${fontSize}px ${fontFam}`;
+                    const rawW = ctx.measureText(tok.char).width;
+
+                    ctx.fillStyle = tok.color || defaultColor;
+                    ctx.fillText(tok.char, curX, curY);
+
+                    if (tok.u) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = ctx.fillStyle;
+                        ctx.lineWidth = 1.5;
+                        ctx.moveTo(curX, curY + fontSize + 2);
+                        ctx.lineTo(curX + rawW, curY + fontSize + 2);
+                        ctx.stroke();
+                    }
+                    if (tok.s) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = ctx.fillStyle;
+                        ctx.lineWidth = 1.5;
+                        ctx.moveTo(curX, curY + fontSize / 2);
+                        ctx.lineTo(curX + rawW, curY + fontSize / 2);
+                        ctx.stroke();
+                    }
+
+                    curX += rawW + letterSpacing;
+                });
+            });
+        }
+
+        // --- 9. 경량 ZIP 프로젝트 입출력 ---
+        function exportProjectPackage() {
+            flushDirectEdits();
+            const zip = new JSZip();
+            const assetsFolder = zip.folder("assets");
+            const assetMapping = [];
+
+            appAssets.forEach((asset, id) => {
+                const filename = `${id}.png`;
+                assetsFolder.file(filename, asset.blob);
+                assetMapping.push({ id, filename });
+            });
+
+            const charRows = getCharRowsData();
+
+            const projectJson = {
+                settings: getSettingsObject(),
+                scriptRawText,
+                parsedBlocks,
+                charRows,
+                bgAssetId,
+                currentTargetWidth,
+                currentTargetHeight,
+                assetMapping
+            };
+
+            zip.file("project.json", JSON.stringify(projectJson, null, 2));
+            zip.generateAsync({ type: "blob" }).then((content) => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = `reading_studio_project_${Date.now()}.zip`;
+                link.click();
+            });
+        }
+
+        function importProjectPackage(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            JSZip.loadAsync(file).then(async (zip) => {
+                try {
+                    const jsonStr = await zip.file("project.json").async("string");
+                    const data = JSON.parse(jsonStr);
+
+                    if (!data || !Array.isArray(data.parsedBlocks) || !data.settings) throw new Error('잘못된 프로젝트');
+                    const incomingAssets = [];
+                    if (data.assetMapping) {
+                        for (const item of data.assetMapping) {
+                            const blob = await zip.file(`assets/${item.filename}`).async("blob");
+                            incomingAssets.push({id: item.id, blob});
+                        }
+                    }
+                    await autoSaveQueue;
+                    incomingAssets.forEach(item => registerAsset(item.id, item.blob));
+                    applySettingsObject(data.settings);
+                    scriptRawText = data.scriptRawText || "";
+                    parsedBlocks = data.parsedBlocks || [];
+                    bgAssetId = data.bgAssetId || null;
+                    currentTargetWidth = data.currentTargetWidth || 1920;
+                    currentTargetHeight = data.currentTargetHeight || 1080;
+
+                    const charContainer = document.getElementById('char-registration');
+                    charContainer.innerHTML = '';
+                    if (data.charRows) {
+                        data.charRows.forEach(item => addCharRow(item.name, item.assetId, { enabled: item.overrideEnabled, nameColor: item.overrideNameColor, textColor: item.overrideTextColor, boxColor: item.overrideBoxColor }));
+                    }
+
+                    document.getElementById('scene-container').style.width = currentTargetWidth + 'px';
+                    document.getElementById('scene-container').style.height = currentTargetHeight + 'px';
+                    document.getElementById('bg-resolution-info').innerText = `현재 감지된 해상도: ${currentTargetWidth}x${currentTargetHeight} px`;
+
+                    historyStack.undoStack = [];
+                    historyStack.redoStack = [];
+                    captureDeltaStart();
+                    cleanupUnusedAssets();
+                    document.getElementById('text-input').value = '';
+                    renderSceneDOM();
+                    await runAutoSave();
+                    alert("📦 프로젝트 패키지(.zip) 복원 완료!");
+                } catch (e) {
+                    alert("프로젝트 패키지 불러오기 실패");
+                }
+            });
+            input.value = "";
+        }
+
+        // --- 10. 이벤트 바인딩 및 초기화 ---
+        document.getElementById('bg-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                captureDeltaStart();
+                const tempUrl = URL.createObjectURL(file);
+                const img = new Image();
+                img.onerror = function() {
+                    URL.revokeObjectURL(tempUrl);
+                    alert("배경 이미지를 불러올 수 없습니다. 파일이 손상되었거나 지원하지 않는 형식입니다.");
+                    e.target.value = "";
+                };
+                img.onload = function() {
+                    URL.revokeObjectURL(tempUrl);
+                    currentTargetWidth = img.width;
+                    currentTargetHeight = img.height;
+                    const oldBgAssetId = bgAssetId;
+                    const id = generateUniqueId("bg");
+                    registerAsset(id, file);
+                    bgAssetId = id;
+                    if (oldBgAssetId) releaseAsset(oldBgAssetId);
+
+                    document.getElementById('scene-container').style.width = currentTargetWidth + 'px';
+                    document.getElementById('scene-container').style.height = currentTargetHeight + 'px';
+                    document.getElementById('bg-resolution-info').innerText = `현재 감지된 해상도: ${img.width}x${img.height} px`;
+
+                    fitSceneToContent();
+                    recordHistory();
+                    renderSceneDOM();
+                };
+                img.src = tempUrl;
+            }
+        });
+
+        document.querySelectorAll('.app-setting-input').forEach(input => {
+            input.addEventListener('focus', captureDeltaStart);
+            input.addEventListener('change', () => {
+                recordHistory();
+                // This checkbox only controls future imports, not the current scene.
+                if (input.id === 'auto-fit-scene') return;
+                renderSceneDOM();
+            });
+        });
+
+        document.addEventListener("keydown", function(e) {
+            const ctrlOrCmd = e.ctrlKey || e.metaKey;
+            if (!ctrlOrCmd) return;
+
+            const activeEl = document.activeElement;
+            const activeTag = activeEl ? activeEl.tagName : "";
+            const nonTypingInputTypes = ["color", "checkbox", "range", "file", "button"];
+            const isTyping = (activeTag === "INPUT" && !nonTypingInputTypes.includes(activeEl.type)) || activeTag === "TEXTAREA" || activeEl.isContentEditable;
+
+            if (!isTyping) {
+                const key = e.key.toLowerCase();
+                if (key === "z" && !e.shiftKey) { e.preventDefault(); handleUndo(); return; }
+                if (key === "y" || (key === "z" && e.shiftKey)) { e.preventDefault(); handleRedo(); return; }
+            }
+
+            if (!isTyping && currentControlMode === "format" && currentActiveBlockId && savedSelectionOffsets) {
+                const key = e.key.toLowerCase();
+                if (key === "b") { e.preventDefault(); applyFormat('[b]'); }
+                else if (key === "i") { e.preventDefault(); applyFormat('[i]'); }
+                else if (key === "u") { e.preventDefault(); applyFormat('[u]'); }
+                else if (key === "s" && !e.shiftKey) { e.preventDefault(); applyFormat('[s]'); }
+            }
+        });
+
+        (async function initApp() {
+            refreshLayoutPresetSelect();
+            const restored = await tryRestoreAutoSave();
+            if (!restored) {
+                addCharRow();
+                captureDeltaStart();
+                renderSceneDOM();
+            }
+            try {
+                await document.fonts.ready;
+                renderSceneDOM();
+            } catch (e) {
+                console.warn("Font ready re-render failed", e);
+            }
+        })();
+    </script>
+
+<script>
+(function organizeStudioInterface() {
+    const panel = document.getElementById('control-panel-area');
+    const preview = document.getElementById('preview-wrapper-zone');
+    const groups = Array.from(panel.querySelectorAll('.control-group'));
+    const oldHeader = panel.querySelector('.panel-header');
+    const toolbar = panel.querySelector('.top-toolbar');
+    const actions = panel.querySelector('.btn-container');
+    const shell = document.createElement('div'); shell.className = 'studio-shell';
+    document.body.insertBefore(shell, panel);
+    const header = document.createElement('header');header.className='studio-header';
+    header.innerHTML='<div class="studio-brand"><div class="studio-mark" aria-hidden="true">◩</div><div><div class="studio-kicker">Scene Studio</div><h1>대사 리딩 장면 메이커</h1><p>대본에서 장면으로, 나만의 리딩 화면을 만드세요.</p></div></div>';
+    header.appendChild(document.getElementById('autosave-indicator'));
+    shell.appendChild(header);shell.appendChild(toolbar);
+    const toolbarLabels=['되돌리기','다시 실행','일반 편집','서식 드래그','프로젝트 저장','프로젝트 열기'];
+    toolbar.querySelectorAll('button').forEach((b,i)=>{b.textContent=toolbarLabels[i];if(i<2)b.title=i?'다시 실행 · Ctrl+Y':'되돌리기 · Ctrl+Z';});
+    const toolbarButtons=toolbar.querySelectorAll('button');
+    const sep=document.createElement('span');sep.className='toolbar-separator';toolbar.insertBefore(sep,toolbarButtons[2]);
+    const space=document.createElement('span');space.className='toolbar-space';toolbar.insertBefore(space,toolbarButtons[4]);
+    const workspace=document.createElement('main');workspace.className='studio-workspace';shell.appendChild(workspace);
+    // Move existing controls without changing IDs, handlers, values or their listeners.
+    workspace.appendChild(panel);oldHeader.remove();
+    const inspector=document.createElement('div');inspector.className='inspector-heading';inspector.innerHTML='<strong>장면 설정</strong><span>INSPECTOR</span>';
+    const tabs=document.createElement('nav');tabs.className='settings-tabs';tabs.setAttribute('aria-label','설정 분류');
+    const scroll=document.createElement('div');scroll.className='settings-scroll';
+    const sections=[['배경 이미지','assets'],['캐릭터와 감정','assets'],['대본 가져오기','assets'],['페이지 설정','layout'],['글꼴과 전체 배치','layout'],['레이아웃 프리셋','layout'],['텍스트 간격과 모서리','style'],['캐릭터 이미지 크기','style'],['캐릭터 이름','style'],['대사 상자','style'],['지문 상자','style']];
+    groups.forEach((group,i)=>{
+        const [title,category]=sections[i]||['추가 설정','style'];
+        const details=document.createElement('details');details.className='studio-section';details.dataset.category=category;details.open=true;
+        const summary=document.createElement('summary');summary.innerHTML='<span class="section-num">'+String(i+1).padStart(2,'0')+'</span><span>'+title+'</span>';
+        const first=group.firstElementChild;
+        if(first && first.tagName==='LABEL' && !first.querySelector('input')) first.remove();
+        details.appendChild(summary);details.appendChild(group);scroll.appendChild(details);
+    });
+    panel.replaceChildren(inspector,tabs,scroll);
+    [['assets','자료'],['layout','배치'],['style','스타일']].forEach(([key,label])=>{
+        const button=document.createElement('button');button.type='button';button.textContent=label;
+        button.addEventListener('click',()=>selectSettings(key));button.dataset.tab=key;tabs.appendChild(button);
+    });
+    function selectSettings(key){
+        tabs.querySelectorAll('button').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.tab===key)));
+        scroll.querySelectorAll('.studio-section').forEach(section=>section.hidden=section.dataset.category!==key);scroll.scrollTop=0;
+    }
+    selectSettings('assets');
+    // Accessible names for compact fields whose descriptions are adjacent text.
+    panel.querySelectorAll('input,select').forEach(input=>{
+        if(input.getAttribute('aria-label') || input.closest('label'))return;
+        const previous=input.previousElementSibling;
+        const group=input.closest('.studio-section');
+        const label=(previous&&previous.tagName==='SPAN'?previous.textContent:input.getAttribute('placeholder')) || (group?group.querySelector('summary').textContent:'설정');
+        input.setAttribute('aria-label',label.trim());
+    });
+    const stage=document.createElement('section');stage.className='preview-panel';stage.setAttribute('aria-label','장면 미리보기');workspace.appendChild(stage);
+    const stageHeader=document.createElement('div');stageHeader.className='preview-panel-header';stageHeader.innerHTML='<div><h2>장면 미리보기</h2><p>일반 모드에서는 대사를 직접 수정할 수 있어요.</p></div><div class="preview-tools"><button type="button" id="preview-fit" title="대사 배치는 바꾸지 않고 미리보기 배율만 조절합니다.">화면에 맞춤</button><button type="button" id="preview-actual">100%</button><output id="preview-scale" aria-label="미리보기 배율">100%</output></div>';
+    stage.appendChild(stageHeader);stage.appendChild(preview);
+    const empty=document.createElement('div');empty.className='preview-empty';empty.innerHTML='<span class="empty-icon" aria-hidden="true">▤</span><strong>첫 장면을 만들어 볼까요?</strong><p>배경과 캐릭터를 준비하고 대본을 불러오면 이곳에 장면이 나타납니다.</p><button type="button" class="primary-action">대본 불러오기</button>';
+    empty.querySelector('button').onclick=()=>document.getElementById('text-input').click();preview.appendChild(empty);
+    const layoutControls=document.createElement('div');layoutControls.className='preview-layout-controls';layoutControls.setAttribute('role','group');layoutControls.setAttribute('aria-label','장면 배치');
+    const layoutTitle=document.createElement('div');layoutTitle.className='preview-layout-heading';layoutTitle.innerHTML='<strong>배치</strong><span>지금 맞추기로 재배치하고, 자동 적용 여부를 선택하세요.</span>';layoutControls.appendChild(layoutTitle);
+    const layoutRow=document.createElement('div');layoutRow.className='preview-layout-row';layoutControls.appendChild(layoutRow);
+    const autoInput=document.getElementById('auto-fit-scene');
+    const autoLabel=autoInput.closest('label');const autoHelp=autoLabel.nextElementSibling;
+    const fitButton=Array.from(panel.querySelectorAll('button')).find(button=>(button.getAttribute('onclick')||'').includes('fitSceneToContent'));
+    autoLabel.lastChild.textContent=' 불러올 때 자동 맞춤';autoLabel.title='이미지나 대본을 불러올 때 여백·대사 너비·글자 크기를 자동 조정합니다.';
+    autoLabel.removeAttribute('style');layoutRow.appendChild(autoLabel);autoHelp.remove();
+    fitButton.textContent='지금 맞추기';fitButton.removeAttribute('style');fitButton.title='현재 이미지와 대본에 맞춰 실제 배치를 다시 조정합니다.';layoutRow.appendChild(fitButton);
+    const spacingInput=document.getElementById('auto-dialogue-spacing');const spacingLabel=spacingInput.closest('label');const spacingHelp=spacingLabel.nextElementSibling;
+    spacingLabel.lastChild.textContent=' 대사 겹침 방지';spacingLabel.title='대사·이름 상자의 높이에 맞춰 다음 캐릭터와의 간격을 자동 확보합니다.';spacingLabel.removeAttribute('style');layoutRow.appendChild(spacingLabel);spacingHelp.remove();
+    // Action first; keep the two persistent preferences together.
+    fitButton.classList.add('fit-now-action');
+    layoutRow.insertBefore(fitButton, autoLabel);
+    const layoutOptions=document.createElement('div');layoutOptions.className='preview-layout-options';
+    layoutOptions.appendChild(autoLabel);layoutOptions.appendChild(spacingLabel);layoutRow.appendChild(layoutOptions);
+    stage.appendChild(layoutControls);
+    const meta=document.createElement('div');meta.className='preview-meta';meta.innerHTML='<span id="studio-size"></span><span id="studio-count"></span><span id="studio-pages"></span>';stage.appendChild(meta);
+    const footer=document.createElement('div');footer.className='preview-footer';footer.innerHTML='<p>설정은 자동으로 반영됩니다.</p>';footer.appendChild(actions);stage.appendChild(footer);
+    const actionButtons=actions.querySelectorAll('button');actionButtons[0].textContent='장면 빌드';actionButtons[1].textContent='PNG 다운로드';actionButtons[1].classList.add('primary-action');
+    let fit=true,frame=null;
+    function fitPreview(){
+        frame=null;
+        const scene=document.getElementById('scene-container');const wrap=document.getElementById('scene-container-wrapper');
+        const style=getComputedStyle(preview);const available=Math.max(120,preview.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight));
+        const padY=parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
+        const stageTop=Math.max(12,stage.getBoundingClientRect().top);
+        const chromeHeight=Array.from(stage.children).filter(node=>node!==preview).reduce((total,node)=>total+node.getBoundingClientRect().height,0);
+        const viewportHeight=window.visualViewport?window.visualViewport.height:window.innerHeight;
+        const previewBudget=Math.max(120,viewportHeight-stageTop-chromeHeight-20);
+        const availableHeight=Math.max(64,previewBudget-padY);
+        const scale=fit?Math.min(1,available/currentTargetWidth,availableHeight/currentTargetHeight):1;
+        scene.style.transform='scale('+scale+')';wrap.style.width=currentTargetWidth*scale+'px';wrap.style.height=currentTargetHeight*scale+'px';
+        preview.style.minHeight='0';preview.style.maxHeight=previewBudget+'px';
+        preview.style.height=(fit?currentTargetHeight*scale+padY:previewBudget)+'px';
+        // Keep the inspector within the same visible work area on desktop.
+        if(window.innerWidth>780){
+            const inspectorChrome=inspector.getBoundingClientRect().height+tabs.getBoundingClientRect().height;
+            scroll.style.minHeight='0';scroll.style.maxHeight=Math.max(100,viewportHeight-Math.max(12,panel.getBoundingClientRect().top)-inspectorChrome-22)+'px';
+        }else{scroll.style.minHeight='';scroll.style.maxHeight='';}
+        document.getElementById('preview-scale').textContent=Math.round(scale*100)+'%';
+        document.getElementById('preview-fit').setAttribute('aria-pressed',String(fit));document.getElementById('preview-actual').setAttribute('aria-pressed',String(!fit));
+        empty.hidden=parsedBlocks.length>0;
+        document.getElementById('studio-size').textContent=currentTargetWidth+' × '+currentTargetHeight;
+        document.getElementById('studio-count').textContent=parsedBlocks.length+'개 장면 블록';
+        document.getElementById('studio-pages').textContent=document.getElementById('dual-page-toggle').checked?'2쪽 · 왼쪽 → 오른쪽':'1쪽';
+    }
+    function scheduleFit(){if(frame===null)frame=requestAnimationFrame(fitPreview);}
+    document.getElementById('preview-fit').onclick=()=>{fit=true;scheduleFit();};document.getElementById('preview-actual').onclick=()=>{fit=false;scheduleFit();};
+    const resizeObserver=new ResizeObserver(scheduleFit);resizeObserver.observe(preview);resizeObserver.observe(document.getElementById('scene-container'));resizeObserver.observe(stageHeader);resizeObserver.observe(layoutControls);resizeObserver.observe(footer);resizeObserver.observe(toolbar);
+    panel.addEventListener('change',scheduleFit);
+    layoutControls.addEventListener('change',scheduleFit);
+    new MutationObserver(scheduleFit).observe(document.getElementById('scene-container'),{childList:true,subtree:true,characterData:true});
+    window.addEventListener('resize',scheduleFit);
+    if(window.visualViewport)window.visualViewport.addEventListener('resize',scheduleFit);
+    scheduleFit();
+    // Import a newly selected script without requiring a second button press.
+    document.getElementById('text-input').addEventListener('change',function(){if(this.files[0])buildSceneUI();});
+})();
+</script>
+
+</body>
+</html>
